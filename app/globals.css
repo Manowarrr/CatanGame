@@ -1,0 +1,274 @@
+/**
+ * Global styles for Catan game
+ * Tailwind CSS + Custom CSS variables
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   CSS VARIABLES - Цветовая схема
+   ============================================================================ */
+
+:root {
+  /* Resource colors */
+  --color-wood: #8B4513;
+  --color-brick: #CD5C5C;
+  --color-sheep: #90EE90;
+  --color-wheat: #FFD700;
+  --color-ore: #708090;
+  --color-desert: #F4A460;
+
+  /* Player colors */
+  --color-player-1: #FF6B6B;
+  --color-player-2: #4ECDC4;
+  --color-player-3: #45B7D1;
+  --color-player-4: #FFA07A;
+
+  /* Game board dimensions */
+  --hex-size: 80px;
+  --vertex-size: 16px;
+  --road-width: 8px;
+
+  /* UI colors */
+  --background: #ffffff;
+  --foreground: #171717;
+  --card-background: #f5f5f5;
+  --border-color: #e5e5e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --card-background: #1a1a1a;
+    --border-color: #333333;
+  }
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+/* ============================================================================
+   UTILITY CLASSES - Вспомогательные классы
+   ============================================================================ */
+
+.resource-wood {
+  background-color: var(--color-wood);
+}
+
+.resource-brick {
+  background-color: var(--color-brick);
+}
+
+.resource-sheep {
+  background-color: var(--color-sheep);
+}
+
+.resource-wheat {
+  background-color: var(--color-wheat);
+}
+
+.resource-ore {
+  background-color: var(--color-ore);
+}
+
+.terrain-desert {
+  background-color: var(--color-desert);
+}
+
+/* ============================================================================
+   GAME BOARD STYLES
+   ============================================================================ */
+
+.hex-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hex-row {
+  display: flex;
+  gap: 4px;
+}
+
+.hex {
+  width: var(--hex-size);
+  height: calc(var(--hex-size) * 1.732 / 2); /* sqrt(3)/2 for hexagon height */
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.hex:hover {
+  transform: scale(1.05);
+}
+
+.hex.highlighted {
+  opacity: 0.8;
+  box-shadow: 0 0 0 3px #FFD700;
+}
+
+.vertex {
+  width: var(--vertex-size);
+  height: var(--vertex-size);
+  border-radius: 50%;
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.2s;
+  background-color: #ccc;
+  border: 2px solid #333;
+}
+
+.vertex:hover {
+  transform: scale(1.2);
+}
+
+.vertex.highlighted {
+  box-shadow: 0 0 0 2px #FFD700;
+  animation: pulse 1s infinite;
+}
+
+.vertex.has-settlement {
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.vertex.has-city {
+  border-radius: 0;
+}
+
+.road {
+  position: absolute;
+  height: var(--road-width);
+  background-color: #333;
+  transform-origin: left center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.road:hover {
+  opacity: 0.8;
+}
+
+.road.highlighted {
+  box-shadow: 0 0 0 2px #FFD700;
+  animation: pulse 1s infinite;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* ============================================================================
+   BUTTON STYLES
+   ============================================================================ */
+
+.btn {
+  @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+  @apply hover:shadow-lg active:scale-95;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 text-white hover:bg-gray-700;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.btn:disabled {
+  @apply opacity-50 cursor-not-allowed;
+  @apply hover:shadow-none active:scale-100;
+}
+
+/* ============================================================================
+   CARD STYLES
+   ============================================================================ */
+
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4;
+  @apply border border-gray-200 dark:border-gray-700;
+}
+
+/* ============================================================================
+   MODAL STYLES
+   ============================================================================ */
+
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.modal-content {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full;
+  animation: slideUp 0.3s ease-out;
+}
+
+/* ============================================================================
+   RESPONSIVE UTILITIES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  :root {
+    --hex-size: 60px;
+    --vertex-size: 12px;
+    --road-width: 6px;
+  }
+}
