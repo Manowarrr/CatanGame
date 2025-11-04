@@ -55,6 +55,18 @@ export enum DevCardType {
 }
 
 /**
+ * Типы портов
+ */
+export enum PortType {
+  GENERIC = 'GENERIC',     // Универсальный порт (3:1)
+  WOOD = 'WOOD',           // Специализированный порт (2:1 дерево)
+  BRICK = 'BRICK',         // Специализированный порт (2:1 глина)
+  SHEEP = 'SHEEP',         // Специализированный порт (2:1 овца)
+  WHEAT = 'WHEAT',         // Специализированный порт (2:1 пшеница)
+  ORE = 'ORE',             // Специализированный порт (2:1 руда)
+}
+
+/**
  * Типы игроков
  */
 export enum PlayerType {
@@ -105,6 +117,7 @@ export interface Vertex {
   building: Building | null;     // Постройка на вершине
   neighborVertexIds: string[];   // ID соседних вершин (2-3 штуки)
   neighborEdgeIds: string[];     // ID соседних ребер (2-3 штуки)
+  port: PortType | null;         // Порт (если есть)
 }
 
 /**
@@ -187,6 +200,7 @@ export interface GameState {
   turnNumber: number;                // Номер хода
   winner: string | null;             // ID победителя (если игра окончена)
   initialPlacementRound: number;     // Раунд начальной расстановки (1 или 2)
+  currentTradeOffer?: TradeOffer;    // Текущее предложение обмена (если есть)
 }
 
 // ============================================================================

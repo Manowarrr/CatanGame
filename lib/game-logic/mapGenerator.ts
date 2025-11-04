@@ -219,6 +219,7 @@ function generateVertices(hexes: Hex[]): Vertex[] {
           building: null,
           neighborVertexIds: [],
           neighborEdgeIds: [],
+          port: null, // Порты будут назначены позже
         };
 
         vertices.push(vertex);
