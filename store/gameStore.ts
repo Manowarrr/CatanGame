@@ -231,7 +231,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
     if (!currentPlayer) return;
 
-    const newState = handleBuildRoad(currentPlayer.id, edgeId, state);
+    const isInitialPlacement = state.phase === GamePhase.INITIAL_PLACEMENT;
+    const newState = handleBuildRoad(currentPlayer.id, edgeId, state, isInitialPlacement);
 
     // Проверка что начальная расстановка: если построили дорогу - переход к следующему игроку
     if (newState.phase === GamePhase.INITIAL_PLACEMENT) {
@@ -309,7 +310,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
     if (!currentPlayer) return;
 
-    const newState = handleBuildSettlement(currentPlayer.id, vertexId, state);
+    const isInitialPlacement = state.phase === GamePhase.INITIAL_PLACEMENT;
+    const newState = handleBuildSettlement(currentPlayer.id, vertexId, state, isInitialPlacement);
 
     // Начальная расстановка: после строительства поселения показать доступные ребра для дороги
     if (newState.phase === GamePhase.INITIAL_PLACEMENT) {

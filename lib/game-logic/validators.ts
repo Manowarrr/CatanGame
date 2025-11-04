@@ -25,6 +25,7 @@ import { BUILDING_COSTS, GAME_CONSTANTS } from '@/lib/constants/game.constants';
  *   - player: Player - игрок, который хочет построить дорогу
  *   - edgeId: string - ID ребра для строительства
  *   - gameState: GameState - текущее состояние игры
+ *   - isInitialPlacement: boolean - флаг начальной расстановки (по умолчанию false)
  * OUTPUTS: ValidationResult - результат валидации с возможной ошибкой
  * SIDE_EFFECTS: None (чистая функция)
  * KEYWORDS: validation, road, building rules
@@ -33,12 +34,13 @@ import { BUILDING_COSTS, GAME_CONSTANTS } from '@/lib/constants/game.constants';
 export function canBuildRoad(
   player: Player,
   edgeId: string,
-  gameState: GameState
+  gameState: GameState,
+  isInitialPlacement: boolean = false
 ): ValidationResult {
   // START_BLOCK_RESOURCE_CHECK
-  // Описание: Проверка наличия необходимых ресурсов у игрока
+  // Описание: Проверка наличия необходимых ресурсов у игрока (только если не начальная расстановка)
 
-  if (!hasResources(player, BUILDING_COSTS.ROAD)) {
+  if (!isInitialPlacement && !hasResources(player, BUILDING_COSTS.ROAD)) {
     return {
       valid: false,
       error: 'Not enough resources to build a road',
@@ -105,6 +107,7 @@ export function canBuildRoad(
  *   - player: Player - игрок
  *   - vertexId: string - ID вершины для строительства
  *   - gameState: GameState - текущее состояние игры
+ *   - isInitialPlacement: boolean - флаг начальной расстановки (по умолчанию false)
  * OUTPUTS: ValidationResult - результат валидации
  * SIDE_EFFECTS: None
  * KEYWORDS: validation, settlement, distance rule
@@ -113,12 +116,13 @@ export function canBuildRoad(
 export function canBuildSettlement(
   player: Player,
   vertexId: string,
-  gameState: GameState
+  gameState: GameState,
+  isInitialPlacement: boolean = false
 ): ValidationResult {
   // START_BLOCK_RESOURCE_CHECK
-  // Описание: Проверка ресурсов
+  // Описание: Проверка ресурсов (только если не начальная расстановка)
 
-  if (!hasResources(player, BUILDING_COSTS.SETTLEMENT)) {
+  if (!isInitialPlacement && !hasResources(player, BUILDING_COSTS.SETTLEMENT)) {
     return {
       valid: false,
       error: 'Not enough resources to build a settlement',
@@ -167,18 +171,20 @@ export function canBuildSettlement(
   // END_BLOCK_DISTANCE_RULE_CHECK
 
   // START_BLOCK_ROAD_ADJACENCY_CHECK
-  // Описание: Проверка что вершина примыкает к дороге игрока
+  // Описание: Проверка что вершина примыкает к дороге игрока (только если не начальная расстановка)
 
-  const hasAdjacentRoad = vertex.neighborEdgeIds.some((edgeId) => {
-    const edge = gameState.edges.find((e) => e.id === edgeId);
-    return edge?.road?.playerId === player.id;
-  });
+  if (!isInitialPlacement) {
+    const hasAdjacentRoad = vertex.neighborEdgeIds.some((edgeId) => {
+      const edge = gameState.edges.find((e) => e.id === edgeId);
+      return edge?.road?.playerId === player.id;
+    });
 
-  if (!hasAdjacentRoad) {
-    return {
-      valid: false,
-      error: 'Settlement must be adjacent to your road',
-    };
+    if (!hasAdjacentRoad) {
+      return {
+        valid: false,
+        error: 'Settlement must be adjacent to your road',
+      };
+    }
   }
   // END_BLOCK_ROAD_ADJACENCY_CHECK
 

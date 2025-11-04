@@ -22,7 +22,7 @@ import {
   canBuildCity,
   canBuyDevCard,
 } from './validators';
-import { BUILDING_COSTS } from '@/lib/constants/game.constants';
+import { BUILDING_COSTS, TERRAIN_TO_RESOURCE } from '@/lib/constants/game.constants';
 import { checkLongestRoad, checkLargestArmy } from './calculators';
 
 /**
@@ -40,9 +40,10 @@ import { checkLongestRoad, checkLargestArmy } from './calculators';
 export function handleBuildRoad(
   playerId: string,
   edgeId: string,
-  gameState: GameState
+  gameState: GameState,
+  isInitialPlacement: boolean = false
 ): GameState {
-  console.log('[ActionHandlers][handleBuildRoad][START]', { playerId, edgeId });
+  console.log('[ActionHandlers][handleBuildRoad][START]', { playerId, edgeId, isInitialPlacement });
 
   // START_BLOCK_VALIDATION
   // Описание: Валидация действия
@@ -55,7 +56,7 @@ export function handleBuildRoad(
     return gameState;
   }
 
-  const validation = canBuildRoad(player, edgeId, gameState);
+  const validation = canBuildRoad(player, edgeId, gameState, isInitialPlacement);
   if (!validation.valid) {
     console.error('[ActionHandlers][handleBuildRoad][VALIDATION][FAIL]', {
       error: validation.error,
@@ -65,7 +66,7 @@ export function handleBuildRoad(
   // END_BLOCK_VALIDATION
 
   // START_BLOCK_RESOURCE_DEDUCTION
-  // Описание: Вычитание ресурсов
+  // Описание: Вычитание ресурсов (только если не начальная расстановка)
 
   const updatedPlayer = {
     ...player,
@@ -73,9 +74,12 @@ export function handleBuildRoad(
     roads: player.roads - 1,
   };
 
-  Object.entries(BUILDING_COSTS.ROAD).forEach(([resource, amount]) => {
-    updatedPlayer.resources[resource as ResourceType] -= amount;
-  });
+  // При начальной расстановке дороги бесплатные
+  if (!isInitialPlacement) {
+    Object.entries(BUILDING_COSTS.ROAD).forEach(([resource, amount]) => {
+      updatedPlayer.resources[resource as ResourceType] -= amount;
+    });
+  }
   // END_BLOCK_RESOURCE_DEDUCTION
 
   // START_BLOCK_ROAD_PLACEMENT
@@ -118,6 +122,7 @@ export function handleBuildRoad(
  *   - playerId: string - ID игрока
  *   - vertexId: string - ID вершины
  *   - gameState: GameState - текущее состояние
+ *   - isInitialPlacement: boolean - флаг начальной расстановки (по умолчанию false)
  * OUTPUTS: GameState - новое состояние
  * SIDE_EFFECTS: None
  * KEYWORDS: build settlement, state update
@@ -125,11 +130,13 @@ export function handleBuildRoad(
 export function handleBuildSettlement(
   playerId: string,
   vertexId: string,
-  gameState: GameState
+  gameState: GameState,
+  isInitialPlacement: boolean = false
 ): GameState {
   console.log('[ActionHandlers][handleBuildSettlement][START]', {
     playerId,
     vertexId,
+    isInitialPlacement,
   });
 
   const player = gameState.players.find((p) => p.id === playerId);
@@ -143,16 +150,43 @@ export function handleBuildSettlement(
     return gameState;
   }
 
-  // Вычитание ресурсов
+  // Вычитание ресурсов (только если не начальная расстановка)
   const updatedPlayer = {
     ...player,
     resources: { ...player.resources },
     settlements: player.settlements - 1,
   };
 
-  Object.entries(BUILDING_COSTS.SETTLEMENT).forEach(([resource, amount]) => {
-    updatedPlayer.resources[resource as ResourceType] -= amount;
-  });
+  if (!isInitialPlacement) {
+    Object.entries(BUILDING_COSTS.SETTLEMENT).forEach(([resource, amount]) => {
+      updatedPlayer.resources[resource as ResourceType] -= amount;
+    });
+  }
+
+  // Если это второе поселение в начальной расстановке (раунд 2), дать ресурсы
+  if (isInitialPlacement && gameState.initialPlacementRound === 2) {
+    const vertex = gameState.vertices.find((v) => v.id === vertexId);
+    if (vertex) {
+      // Найти все гексы соседние с этой вершиной
+      const adjacentHexes = gameState.hexes.filter((hex) =>
+        hex.vertexIds.includes(vertexId)
+      );
+
+      // Добавить по 1 ресурсу от каждого соседнего гекса (кроме пустыни)
+      adjacentHexes.forEach((hex) => {
+        const resource = TERRAIN_TO_RESOURCE[hex.terrain];
+        if (resource) {
+          updatedPlayer.resources[resource] += 1;
+        }
+      });
+
+      console.log('[ActionHandlers][handleBuildSettlement][INITIAL_RESOURCES]', {
+        playerId,
+        adjacentHexes: adjacentHexes.map((h) => h.terrain),
+        resources: updatedPlayer.resources,
+      });
+    }
+  }
 
   // Размещение поселения
   const updatedVertices = gameState.vertices.map((vertex) =>
