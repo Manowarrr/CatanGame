@@ -31,6 +31,8 @@ import {
   handleBuildRoad,
   handleBuildSettlement,
   handleBuildCity,
+  handleBuyDevCard,
+  handlePlayKnight,
 } from '@/lib/game-logic/actionHandlers';
 import {
   handleMoveRobber,
@@ -71,6 +73,10 @@ interface GameStore {
   // Actions - Robber mechanics
   moveRobber: (hexId: string, stealFromPlayerId: string | null) => void;
   discardResources: (playerId: string, resources: Partial<Record<import('@/types/game.types').ResourceType, number>>) => void;
+
+  // Actions - Development Cards
+  buyDevCard: () => void;
+  playKnightCard: (hexId: string, stealFromPlayerId: string | null) => void;
 
   // Actions - UI state
   setSelectedHex: (hexId: string | null) => void;
@@ -680,6 +686,66 @@ export const useGameStore = create<GameStore>((set, get) => ({
     console.log('[GameStore][discardResources][SUCCESS]', {
       remainingPlayers: remainingPlayers.length,
     });
+  },
+
+  // ============================================================================
+  // DEVELOPMENT CARD ACTIONS
+  // ============================================================================
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Купить карту развития
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, вычитает ресурсы, добавляет карту
+   * KEYWORDS: development card, buy
+   */
+  buyDevCard: () => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][buyDevCard][START]');
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handleBuyDevCard(currentPlayer.id, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][buyDevCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Knight
+   * INPUTS:
+   *   - hexId: string - ID гексагона для размещения разбойника
+   *   - stealFromPlayerId: string | null - ID игрока для кражи
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, перемещает разбойника, крадет ресурс
+   * KEYWORDS: knight, development card, robber
+   */
+  playKnightCard: (hexId: string, stealFromPlayerId: string | null) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playKnightCard][START]', { hexId, stealFromPlayerId });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayKnight(
+      currentPlayer.id,
+      hexId,
+      stealFromPlayerId,
+      state
+    );
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playKnightCard][SUCCESS]');
+    }
   },
 }));
 
