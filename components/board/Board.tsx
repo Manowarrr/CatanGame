@@ -143,12 +143,15 @@ export function Board({
             const hex = gameState.hexes.find((h) => h.id === hexId);
             if (!hex) return null;
 
+            const isHighlighted = highlightedHexes.includes(hexId);
+            const hasRobber = hex.hasRobber;
+
             return (
               <g key={hexId} transform={`translate(${x + 100}, ${y + 100})`}>
                 <Hex
                   hex={hex}
                   onClick={onHexClick}
-                  highlight={highlightedHexes.includes(hexId)}
+                  highlight={isHighlighted || (onHexClick && !hasRobber)}
                 />
               </g>
             );

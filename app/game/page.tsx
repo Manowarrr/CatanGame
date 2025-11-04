@@ -21,6 +21,7 @@ import {
   chooseInitialRoad,
   decideMainGameAction,
 } from '@/lib/ai/basicAI';
+import { getPlayersToStealFrom } from '@/lib/game-logic/robberHandlers';
 
 /**
  * FUNCTION_CONTRACT:
@@ -37,6 +38,7 @@ export default function GamePage() {
   const buildSettlement = useGameStore((state) => state.buildSettlement);
   const buildCity = useGameStore((state) => state.buildCity);
   const endTurn = useGameStore((state) => state.endTurn);
+  const moveRobber = useGameStore((state) => state.moveRobber);
   const highlightAvailablePositions = useGameStore(
     (state) => state.highlightAvailablePositions
   );
@@ -44,6 +46,7 @@ export default function GamePage() {
   const buildMode = useGameStore((state) => state.buildMode);
   const highlightedVertices = useGameStore((state) => state.highlightedVertices);
   const highlightedEdges = useGameStore((state) => state.highlightedEdges);
+  const highlightedHexes = useGameStore((state) => state.highlightedHexes);
 
   // START_BLOCK_GAME_INITIALIZATION
   // Описание: Инициализация игры при монтировании компонента
@@ -204,6 +207,32 @@ export default function GamePage() {
       buildRoad(edgeId);
     }
   };
+
+  const handleHexClick = (hexId: string) => {
+    // Перемещение разбойника при выпадении 7
+    if (
+      gameState.phase === GamePhase.MAIN_GAME &&
+      gameState.turnPhase === 'ROBBER_ACTIVATION'
+    ) {
+      // Найти гекс
+      const hex = gameState.hexes.find((h) => h.id === hexId);
+
+      // Нельзя оставлять разбойника на том же месте
+      if (hex?.hasRobber) {
+        return;
+      }
+
+      // Получить список игроков для кражи
+      const playersToStealFrom = getPlayersToStealFrom(gameState, hexId, gameState.currentPlayerId);
+
+      // Если есть игроки для кражи - украсть у случайного
+      const stealFromPlayerId = playersToStealFrom.length > 0
+        ? playersToStealFrom[Math.floor(Math.random() * playersToStealFrom.length)]
+        : null;
+
+      moveRobber(hexId, stealFromPlayerId);
+    }
+  };
   // END_BLOCK_CLICK_HANDLERS
 
   // START_BLOCK_PHASE_INSTRUCTION
@@ -271,8 +300,10 @@ export default function GamePage() {
             gameState={gameState}
             onVertexClick={handleVertexClick}
             onEdgeClick={handleEdgeClick}
+            onHexClick={handleHexClick}
             highlightedVertices={highlightedVertices}
             highlightedEdges={highlightedEdges}
+            highlightedHexes={highlightedHexes}
           />
         </div>
         {/* END_BLOCK_BOARD */}
