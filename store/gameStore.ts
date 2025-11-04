@@ -15,6 +15,7 @@ import {
   GamePhase,
   TurnPhase,
   BuildingType,
+  ResourceType,
 } from '@/types/game.types';
 import { generateMap } from '@/lib/game-logic/mapGenerator';
 import {
@@ -31,6 +32,13 @@ import {
   handleBuildSettlement,
   handleBuildCity,
 } from '@/lib/game-logic/actionHandlers';
+import {
+  handleMoveRobber,
+  handleStealResource,
+  handleDiscardResources,
+  needsToDiscardResources,
+  getPlayersToStealFrom,
+} from '@/lib/game-logic/robberHandlers';
 import { PLAYER_COLORS } from '@/lib/constants/game.constants';
 import { calculateVictoryPoints } from '@/lib/game-logic/calculators';
 
@@ -47,6 +55,7 @@ interface GameStore {
   selectedEdge: string | null;
   highlightedVertices: string[];
   highlightedEdges: string[];
+  highlightedHexes: string[];
   buildMode: 'road' | 'settlement' | 'city' | null;
 
   // Actions - Game management
@@ -56,6 +65,10 @@ interface GameStore {
   buildSettlement: (vertexId: string) => void;
   buildCity: (vertexId: string) => void;
   endTurn: () => void;
+
+  // Actions - Robber mechanics
+  moveRobber: (hexId: string, stealFromPlayerId: string | null) => void;
+  discardResources: (playerId: string, resources: Partial<Record<import('@/types/game.types').ResourceType, number>>) => void;
 
   // Actions - UI state
   setSelectedHex: (hexId: string | null) => void;
@@ -84,6 +97,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedEdge: null,
   highlightedVertices: [],
   highlightedEdges: [],
+  highlightedHexes: [],
   buildMode: null,
 
   // ============================================================================
@@ -566,8 +580,87 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       highlightedVertices: [],
       highlightedEdges: [],
+      highlightedHexes: [],
       buildMode: null,
     });
+  },
+
+  // ============================================================================
+  // ROBBER ACTIONS
+  // ============================================================================
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Переместить разбойника и украсть ресурс
+   * INPUTS:
+   *   - hexId: string - ID гексагона для размещения разбойника
+   *   - stealFromPlayerId: string | null - ID игрока для кражи ресурса
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, очищает highlights
+   * KEYWORDS: robber, move, steal
+   */
+  moveRobber: (hexId: string, stealFromPlayerId: string | null) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][moveRobber][START]', { hexId, stealFromPlayerId });
+
+    // START_BLOCK_MOVE_ROBBER
+    // Описание: Перемещение разбойника на новый гекс
+
+    let newState = handleMoveRobber(state, hexId);
+    // END_BLOCK_MOVE_ROBBER
+
+    // START_BLOCK_STEAL_RESOURCE
+    // Описание: Кража ресурса у выбранного игрока
+
+    if (stealFromPlayerId) {
+      newState = handleStealResource(
+        newState,
+        stealFromPlayerId,
+        state.currentPlayerId
+      );
+    }
+    // END_BLOCK_STEAL_RESOURCE
+
+    set({
+      gameState: {
+        ...newState,
+        turnPhase: TurnPhase.ACTIONS,
+      },
+      highlightedHexes: [],
+    });
+
+    console.log('[GameStore][moveRobber][SUCCESS]');
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сбросить ресурсы игрока при выпадении 7
+   * INPUTS:
+   *   - playerId: string - ID игрока
+   *   - resources: Partial<Record<ResourceType, number>> - ресурсы для сброса
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState
+   * KEYWORDS: robber, discard, resources
+   */
+  discardResources: (
+    playerId: string,
+    resources: Partial<Record<ResourceType, number>>
+  ) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][discardResources][START]', {
+      playerId,
+      resources,
+    });
+
+    const newState = handleDiscardResources(state, playerId, resources);
+
+    set({ gameState: newState });
+
+    console.log('[GameStore][discardResources][SUCCESS]');
   },
 }));
 

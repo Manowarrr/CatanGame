@@ -10,11 +10,17 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { Board } from '@/components/board/Board';
 import { PlayerPanel } from '@/components/ui/PlayerPanel';
 import { GamePhase } from '@/types/game.types';
+import {
+  isCurrentPlayerAI,
+  chooseInitialSettlement,
+  chooseInitialRoad,
+  decideMainGameAction,
+} from '@/lib/ai/basicAI';
 
 /**
  * FUNCTION_CONTRACT:
@@ -44,8 +50,8 @@ export default function GamePage() {
 
   useEffect(() => {
     if (!gameState) {
-      // Временно создаем игру с 2 игроками и 2 AI
-      initializeGame(['Player 1', 'Player 2'], 2);
+      // Создаем игру с 1 игроком-человеком и 3 AI противниками
+      initializeGame(['Player'], 3);
     }
   }, [gameState, initializeGame]);
   // END_BLOCK_GAME_INITIALIZATION
@@ -65,6 +71,94 @@ export default function GamePage() {
     }
   }, [gameState, buildMode, highlightedVertices.length, highlightAvailablePositions]);
   // END_BLOCK_AUTO_HIGHLIGHT_INITIAL_PLACEMENT
+
+  // START_BLOCK_AI_INITIAL_PLACEMENT
+  // Описание: AI автоматически делает ходы в начальной расстановке
+
+  const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!gameState || gameState.phase !== GamePhase.INITIAL_PLACEMENT) return;
+    if (!isCurrentPlayerAI(gameState)) return;
+
+    // Очистить предыдущий таймер
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+    }
+
+    // AI делает ход через 1 секунду (для видимости процесса)
+    aiTimeoutRef.current = setTimeout(() => {
+      if (buildMode === 'settlement' || !buildMode) {
+        // Выбрать вершину для поселения
+        const vertexId = chooseInitialSettlement(gameState);
+        if (vertexId) {
+          buildSettlement(vertexId);
+        }
+      } else if (buildMode === 'road' && highlightedEdges.length > 0) {
+        // Выбрать ребро для дороги
+        const lastSettlementVertex = gameState.vertices.find((v) =>
+          v.building?.playerId === gameState.currentPlayerId
+        );
+        if (lastSettlementVertex) {
+          const edgeId = chooseInitialRoad(gameState, lastSettlementVertex.id);
+          if (edgeId) {
+            buildRoad(edgeId);
+          }
+        }
+      }
+    }, 1000);
+
+    return () => {
+      if (aiTimeoutRef.current) {
+        clearTimeout(aiTimeoutRef.current);
+      }
+    };
+  }, [gameState, buildMode, highlightedEdges, buildSettlement, buildRoad]);
+  // END_BLOCK_AI_INITIAL_PLACEMENT
+
+  // START_BLOCK_AI_MAIN_GAME
+  // Описание: AI автоматически делает ходы в основной игре
+
+  useEffect(() => {
+    if (!gameState || gameState.phase !== GamePhase.MAIN_GAME) return;
+    if (!isCurrentPlayerAI(gameState)) return;
+
+    // Очистить предыдущий таймер
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+    }
+
+    // AI принимает решение через 1.5 секунды
+    aiTimeoutRef.current = setTimeout(() => {
+      const action = decideMainGameAction(gameState);
+      if (action) {
+        switch (action.type) {
+          case 'ROLL_DICE':
+            rollDice();
+            break;
+          case 'END_TURN':
+            endTurn();
+            break;
+          case 'BUILD_ROAD':
+            if (action.edgeId) buildRoad(action.edgeId);
+            break;
+          case 'BUILD_SETTLEMENT':
+            if (action.vertexId) buildSettlement(action.vertexId);
+            break;
+          case 'BUILD_CITY':
+            if (action.vertexId) buildCity(action.vertexId);
+            break;
+        }
+      }
+    }, 1500);
+
+    return () => {
+      if (aiTimeoutRef.current) {
+        clearTimeout(aiTimeoutRef.current);
+      }
+    };
+  }, [gameState, rollDice, endTurn, buildRoad, buildSettlement, buildCity]);
+  // END_BLOCK_AI_MAIN_GAME
 
   // START_BLOCK_LOADING_STATE
   // Описание: Показать загрузку если игра не инициализирована

@@ -61,13 +61,17 @@ export function Board({
 
     const hexWidth = 138; // 2 * 69 (ширина гексагона)
     const hexHeight = 160; // Высота гексагона
+    const maxHexCount = Math.max(...HEX_GRID_ROWS); // 5 - максимальное количество гексов в ряду
 
     HEX_GRID_ROWS.forEach((hexCount, rowIndex) => {
-      const offsetX = rowIndex % 2 === 0 ? hexWidth / 2 : 0;
+      // Центрирование ряда относительно самого длинного ряда
+      const centeringOffset = ((maxHexCount - hexCount) * hexWidth) / 2;
+
+      // Вертикальная позиция с учетом stagger
       const rowY = rowIndex * hexHeight * 0.75;
 
       for (let colIndex = 0; colIndex < hexCount; colIndex++) {
-        const x = colIndex * hexWidth + offsetX;
+        const x = colIndex * hexWidth + centeringOffset;
         const y = rowY;
 
         positions.push({
