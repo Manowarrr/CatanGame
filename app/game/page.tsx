@@ -20,6 +20,7 @@ import {
   chooseInitialSettlement,
   chooseInitialRoad,
   decideMainGameAction,
+  chooseRobberTarget,
 } from '@/lib/ai/basicAI';
 import {
   getPlayersToStealFrom,
@@ -155,6 +156,25 @@ export default function GamePage() {
       clearTimeout(aiTimeoutRef.current);
     }
 
+    // START_BLOCK_AI_ROBBER_HANDLING
+    // Описание: Обработка фазы разбойника для AI
+
+    if (gameState.turnPhase === 'ROBBER_ACTIVATION') {
+      aiTimeoutRef.current = setTimeout(() => {
+        const robberTarget = chooseRobberTarget(gameState);
+        if (robberTarget) {
+          moveRobber(robberTarget.hexId, robberTarget.stealFromPlayerId);
+        }
+      }, 1500);
+
+      return () => {
+        if (aiTimeoutRef.current) {
+          clearTimeout(aiTimeoutRef.current);
+        }
+      };
+    }
+    // END_BLOCK_AI_ROBBER_HANDLING
+
     // AI принимает решение через 1.5 секунды
     aiTimeoutRef.current = setTimeout(() => {
       const action = decideMainGameAction(gameState);
@@ -184,7 +204,7 @@ export default function GamePage() {
         clearTimeout(aiTimeoutRef.current);
       }
     };
-  }, [gameState, rollDice, endTurn, buildRoad, buildSettlement, buildCity]);
+  }, [gameState, rollDice, endTurn, buildRoad, buildSettlement, buildCity, moveRobber]);
   // END_BLOCK_AI_MAIN_GAME
 
   // START_BLOCK_AI_DISCARD_RESOURCES

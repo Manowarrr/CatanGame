@@ -8,7 +8,7 @@
  * LINKS_TO_MODULE: types/game.types.ts, store/gameStore.ts
  */
 
-import { GameState, GamePhase, TurnPhase, PlayerType } from '@/types/game.types';
+import { GameState, GamePhase, TurnPhase, PlayerType, BuildingType } from '@/types/game.types';
 import {
   getAvailableSettlementPositions,
   getAvailableRoadPositions,
@@ -137,16 +137,156 @@ export function decideMainGameAction(gameState: GameState): AIAction | null {
   // END_BLOCK_DICE_ROLL_PHASE
 
   // START_BLOCK_ACTIONS_PHASE
-  // Описание: В фазе действий - пока просто завершить ход (базовый AI)
+  // Описание: В фазе действий - пытаемся что-то построить или завершить ход
 
   if (gameState.turnPhase === TurnPhase.ACTIONS) {
-    // TODO: В будущем добавить логику строительства
-    // Пока AI просто завершает ход
+    // START_BLOCK_TRY_BUILD_CITY
+    // Описание: Попытка улучшить поселение до города
+
+    const ownSettlements = gameState.vertices.filter(
+      (v) => v.building?.playerId === currentPlayer.id && v.building?.type === BuildingType.SETTLEMENT
+    );
+
+    if (ownSettlements.length > 0) {
+      // Проверить есть ли ресурсы для города (3 ore, 2 wheat)
+      const canBuildCity =
+        currentPlayer.resources.ORE >= 3 &&
+        currentPlayer.resources.WHEAT >= 2 &&
+        currentPlayer.cities > 0;
+
+      if (canBuildCity) {
+        // Выбрать случайное поселение для улучшения
+        const randomSettlement = ownSettlements[Math.floor(Math.random() * ownSettlements.length)];
+        return { type: 'BUILD_CITY', vertexId: randomSettlement.id };
+      }
+    }
+    // END_BLOCK_TRY_BUILD_CITY
+
+    // START_BLOCK_TRY_BUILD_SETTLEMENT
+    // Описание: Попытка построить новое поселение
+
+    const availableVertices = getAvailableSettlementPositions(currentPlayer.id, gameState);
+
+    if (availableVertices.length > 0) {
+      // Проверить есть ли ресурсы для поселения (1 wood, 1 brick, 1 sheep, 1 wheat)
+      const canBuildSettlement =
+        currentPlayer.resources.WOOD >= 1 &&
+        currentPlayer.resources.BRICK >= 1 &&
+        currentPlayer.resources.SHEEP >= 1 &&
+        currentPlayer.resources.WHEAT >= 1 &&
+        currentPlayer.settlements > 0;
+
+      if (canBuildSettlement) {
+        // Выбрать случайную доступную вершину
+        const randomVertex = availableVertices[Math.floor(Math.random() * availableVertices.length)];
+        return { type: 'BUILD_SETTLEMENT', vertexId: randomVertex };
+      }
+    }
+    // END_BLOCK_TRY_BUILD_SETTLEMENT
+
+    // START_BLOCK_TRY_BUILD_ROAD
+    // Описание: Попытка построить дорогу
+
+    const availableEdges = getAvailableRoadPositions(currentPlayer.id, gameState);
+
+    if (availableEdges.length > 0) {
+      // Проверить есть ли ресурсы для дороги (1 wood, 1 brick)
+      const canBuildRoad =
+        currentPlayer.resources.WOOD >= 1 &&
+        currentPlayer.resources.BRICK >= 1 &&
+        currentPlayer.roads > 0;
+
+      if (canBuildRoad) {
+        // Выбрать случайное доступное ребро
+        const randomEdge = availableEdges[Math.floor(Math.random() * availableEdges.length)];
+        return { type: 'BUILD_ROAD', edgeId: randomEdge };
+      }
+    }
+    // END_BLOCK_TRY_BUILD_ROAD
+
+    // START_BLOCK_END_TURN_DEFAULT
+    // Описание: Если нечего строить - завершить ход
     return { type: 'END_TURN' };
+    // END_BLOCK_END_TURN_DEFAULT
   }
   // END_BLOCK_ACTIONS_PHASE
 
+  // START_BLOCK_ROBBER_ACTIVATION_PHASE
+  // Описание: Фаза активации разбойника - AI должен переместить разбойника
+
+  if (gameState.turnPhase === TurnPhase.ROBBER_ACTIVATION) {
+    // Это состояние обрабатывается в app/game/page.tsx через handleHexClick
+    // AI не нуждается в явном действии здесь, так как логика уже есть в UI слое
+    return null;
+  }
+  // END_BLOCK_ROBBER_ACTIVATION_PHASE
+
   return null;
+}
+
+/**
+ * FUNCTION_CONTRACT:
+ * PURPOSE: Выбрать гекс для перемещения разбойника и игрока для кражи
+ * INPUTS:
+ *   - gameState: GameState - текущее состояние игры
+ * OUTPUTS: { hexId: string, stealFromPlayerId: string | null } - выбранный гекс и жертва
+ * SIDE_EFFECTS: None (использует Math.random)
+ * KEYWORDS: AI, robber, theft
+ */
+export function chooseRobberTarget(gameState: GameState): {
+  hexId: string;
+  stealFromPlayerId: string | null;
+} | null {
+  // START_BLOCK_FIND_VALID_HEXES
+  // Описание: Найти все гексы без разбойника
+
+  const availableHexes = gameState.hexes.filter((h) => !h.hasRobber && h.terrain !== 'DESERT');
+
+  if (availableHexes.length === 0) {
+    // Если нет доступных гексов, выбрать любой кроме текущего
+    const hexesWithoutRobber = gameState.hexes.filter((h) => !h.hasRobber);
+    if (hexesWithoutRobber.length === 0) return null;
+
+    const randomHex = hexesWithoutRobber[Math.floor(Math.random() * hexesWithoutRobber.length)];
+    return { hexId: randomHex.id, stealFromPlayerId: null };
+  }
+  // END_BLOCK_FIND_VALID_HEXES
+
+  // START_BLOCK_SELECT_HEX
+  // Описание: Выбрать случайный гекс (в будущем можно добавить эвристики)
+
+  const randomHex = availableHexes[Math.floor(Math.random() * availableHexes.length)];
+  // END_BLOCK_SELECT_HEX
+
+  // START_BLOCK_FIND_VICTIMS
+  // Описание: Найти всех игроков на выбранном гексе
+
+  const playersOnHex: Set<string> = new Set();
+
+  // Найти все вершины соседние с выбранным гексом
+  randomHex.vertexIds.forEach((vertexId) => {
+    const vertex = gameState.vertices.find((v) => v.id === vertexId);
+    if (vertex?.building && vertex.building.playerId !== gameState.currentPlayerId) {
+      const player = gameState.players.find((p) => p.id === vertex.building!.playerId);
+      // Проверить что у игрока есть ресурсы
+      if (player) {
+        const totalResources = Object.values(player.resources).reduce((sum, count) => sum + count, 0);
+        if (totalResources > 0) {
+          playersOnHex.add(vertex.building.playerId);
+        }
+      }
+    }
+  });
+  // END_BLOCK_FIND_VICTIMS
+
+  // START_BLOCK_SELECT_VICTIM
+  // Описание: Выбрать случайную жертву
+
+  const victims = Array.from(playersOnHex);
+  const stealFromPlayerId = victims.length > 0 ? victims[Math.floor(Math.random() * victims.length)] : null;
+  // END_BLOCK_SELECT_VICTIM
+
+  return { hexId: randomHex.id, stealFromPlayerId };
 }
 
 /**

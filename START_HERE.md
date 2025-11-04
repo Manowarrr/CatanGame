@@ -1,6 +1,6 @@
 # 🎮 Catan Project - Quick Start for AI Agent
 
-**Status:** Phase 0-4 DONE (56%) | Phase 5-8 TODO
+**Status:** Phase 0-5 DONE (65%) | Phase 6 (Basic AI) DONE | Phase 6-8 TODO
 **Stack:** Next.js 16 + TypeScript 5 + Zustand + Tailwind v3
 
 ---
@@ -9,16 +9,19 @@
 
 ### ✅ What's Working
 - **Core logic:** Map generation (DFS), validators, calculators (longest road), action handlers, resource distribution
-- **UI:** Board (SVG hex grid), Hex/Vertex/Edge components, PlayerPanel, Button
+- **UI:** Board (SVG hex grid), Hex/Vertex/Edge components, PlayerPanel, Button, DevCard panels, Modals
 - **Game flow:** Initial placement (2 rounds), dice rolling, building (roads/settlements/cities), turn management
+- **Robber mechanics:** Robber activation on 7, resource discard, stealing from players ✅
+- **Development cards:** All cards implemented (Knight, Road Building, Year of Plenty, Monopoly, Victory Point) ✅
 - **State management:** Zustand store with full game state + UI state
 - **Types:** Complete type system in `types/game.types.ts` + `types/ai.types.ts`
+- **AI (Basic):** AI players can play the game! Initial placement, building (roads/settlements/cities), robber handling ✅
 - **Dev server:** `npm run dev` works, TypeScript compiles ✅
-- **Playable:** Full game loop from initial placement to victory!
+- **Playable:** Full game loop from initial placement to victory! Play against 3 AI opponents! ✅
 
-### 🎯 Next Task: Phase 5 - Robber Mechanics
-Implement robber activation on roll of 7, discard half resources, steal from players.
-See: `docs/ImplementationRoadmap.md` Phase 5 section.
+### 🎯 Next Task: Phase 6 - Advanced AI & Phase 7 - Trading
+Improve AI decision making with heuristics and scoring. Add trading system.
+See: `docs/ImplementationRoadmap.md` Phase 6-7 sections.
 
 ---
 
