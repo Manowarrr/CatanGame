@@ -10,17 +10,28 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { Board } from '@/components/board/Board';
 import { PlayerPanel } from '@/components/ui/PlayerPanel';
-import { GamePhase } from '@/types/game.types';
+import { GamePhase, DevCardType } from '@/types/game.types';
 import {
   isCurrentPlayerAI,
   chooseInitialSettlement,
   chooseInitialRoad,
   decideMainGameAction,
 } from '@/lib/ai/basicAI';
+import {
+  getPlayersToStealFrom,
+  needsToDiscardResources,
+  calculateDiscardAmount,
+} from '@/lib/game-logic/robberHandlers';
+import { DiscardResourcesModal } from '@/components/ui/DiscardResourcesModal';
+import { YearOfPlentyModal } from '@/components/ui/YearOfPlentyModal';
+import { MonopolyModal } from '@/components/ui/MonopolyModal';
+import { RoadBuildingModal } from '@/components/ui/RoadBuildingModal';
+import { DevCardPanel } from '@/components/ui/DevCardPanel';
+import { ResourceType } from '@/types/game.types';
 
 /**
  * FUNCTION_CONTRACT:
@@ -37,6 +48,12 @@ export default function GamePage() {
   const buildSettlement = useGameStore((state) => state.buildSettlement);
   const buildCity = useGameStore((state) => state.buildCity);
   const endTurn = useGameStore((state) => state.endTurn);
+  const moveRobber = useGameStore((state) => state.moveRobber);
+  const buyDevCard = useGameStore((state) => state.buyDevCard);
+  const playKnightCard = useGameStore((state) => state.playKnightCard);
+  const playYearOfPlentyCard = useGameStore((state) => state.playYearOfPlentyCard);
+  const playMonopolyCard = useGameStore((state) => state.playMonopolyCard);
+  const playRoadBuildingCard = useGameStore((state) => state.playRoadBuildingCard);
   const highlightAvailablePositions = useGameStore(
     (state) => state.highlightAvailablePositions
   );
@@ -44,6 +61,16 @@ export default function GamePage() {
   const buildMode = useGameStore((state) => state.buildMode);
   const highlightedVertices = useGameStore((state) => state.highlightedVertices);
   const highlightedEdges = useGameStore((state) => state.highlightedEdges);
+  const highlightedHexes = useGameStore((state) => state.highlightedHexes);
+  const playersNeedingDiscard = useGameStore((state) => state.playersNeedingDiscard);
+  const discardResources = useGameStore((state) => state.discardResources);
+
+  // Local state for dev card modals
+  const [activeDevCardModal, setActiveDevCardModal] = useState<DevCardType | null>(null);
+
+  // Local state for road building card
+  const [isRoadBuildingMode, setIsRoadBuildingMode] = useState(false);
+  const [roadBuildingEdges, setRoadBuildingEdges] = useState<string[]>([]);
 
   // START_BLOCK_GAME_INITIALIZATION
   // Описание: Инициализация игры при монтировании компонента
@@ -160,6 +187,60 @@ export default function GamePage() {
   }, [gameState, rollDice, endTurn, buildRoad, buildSettlement, buildCity]);
   // END_BLOCK_AI_MAIN_GAME
 
+  // START_BLOCK_AI_DISCARD_RESOURCES
+  // Описание: AI автоматически сбрасывает ресурсы при выпадении 7
+
+  useEffect(() => {
+    if (!gameState || playersNeedingDiscard.length === 0) return;
+
+    // Найти первого AI игрока, который должен сбросить ресурсы
+    const aiPlayerToDiscard = playersNeedingDiscard.find((playerId) => {
+      const player = gameState.players.find((p) => p.id === playerId);
+      return player?.type === 'AI';
+    });
+
+    if (!aiPlayerToDiscard) return;
+
+    // Очистить предыдущий таймер
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+    }
+
+    // AI сбрасывает ресурсы через 1 секунду
+    aiTimeoutRef.current = setTimeout(() => {
+      const player = gameState.players.find((p) => p.id === aiPlayerToDiscard);
+      if (!player) return;
+
+      const discardAmount = calculateDiscardAmount(player);
+      const resourcesToDiscard: Partial<Record<ResourceType, number>> = {};
+
+      // Сбросить случайные ресурсы
+      let remainingToDiscard = discardAmount;
+      const availableResources: ResourceType[] = [];
+
+      Object.entries(player.resources).forEach(([resource, count]) => {
+        for (let i = 0; i < count; i++) {
+          availableResources.push(resource as ResourceType);
+        }
+      });
+
+      // Перемешать и взять нужное количество
+      const shuffled = availableResources.sort(() => Math.random() - 0.5);
+      shuffled.slice(0, remainingToDiscard).forEach((resource) => {
+        resourcesToDiscard[resource] = (resourcesToDiscard[resource] || 0) + 1;
+      });
+
+      discardResources(aiPlayerToDiscard, resourcesToDiscard);
+    }, 1000);
+
+    return () => {
+      if (aiTimeoutRef.current) {
+        clearTimeout(aiTimeoutRef.current);
+      }
+    };
+  }, [gameState, playersNeedingDiscard, discardResources]);
+  // END_BLOCK_AI_DISCARD_RESOURCES
+
   // START_BLOCK_LOADING_STATE
   // Описание: Показать загрузку если игра не инициализирована
 
@@ -200,18 +281,120 @@ export default function GamePage() {
   };
 
   const handleEdgeClick = (edgeId: string) => {
-    if (buildMode === 'road') {
+    if (isRoadBuildingMode) {
+      // Road Building card mode - collect edges
+      if (!roadBuildingEdges.includes(edgeId) && roadBuildingEdges.length < 2) {
+        const newEdges = [...roadBuildingEdges, edgeId];
+        setRoadBuildingEdges(newEdges);
+
+        // Auto-confirm if 2 roads selected
+        if (newEdges.length === 2) {
+          playRoadBuildingCard(newEdges);
+          setIsRoadBuildingMode(false);
+          setRoadBuildingEdges([]);
+          clearHighlights();
+        }
+      }
+    } else if (buildMode === 'road') {
       buildRoad(edgeId);
     }
   };
+
+  const handleHexClick = (hexId: string) => {
+    // Перемещение разбойника при выпадении 7
+    if (
+      gameState.phase === GamePhase.MAIN_GAME &&
+      gameState.turnPhase === 'ROBBER_ACTIVATION'
+    ) {
+      // Найти гекс
+      const hex = gameState.hexes.find((h) => h.id === hexId);
+
+      // Нельзя оставлять разбойника на том же месте
+      if (hex?.hasRobber) {
+        return;
+      }
+
+      // Получить список игроков для кражи
+      const playersToStealFrom = getPlayersToStealFrom(gameState, hexId, gameState.currentPlayerId);
+
+      // Если есть игроки для кражи - украсть у случайного
+      const stealFromPlayerId = playersToStealFrom.length > 0
+        ? playersToStealFrom[Math.floor(Math.random() * playersToStealFrom.length)]
+        : null;
+
+      moveRobber(hexId, stealFromPlayerId);
+    }
+  };
   // END_BLOCK_CLICK_HANDLERS
+
+  // START_BLOCK_DEV_CARD_HANDLERS
+  // Описание: Обработчики для карт развития
+
+  const handlePlayDevCard = (cardType: DevCardType) => {
+    if (cardType === DevCardType.KNIGHT) {
+      // Для Knight нужно выбрать гекс (TODO: добавить UI для выбора)
+      // Пока используем простую логику - перемещаем на случайный гекс
+      const hexesWithoutRobber = gameState!.hexes.filter((h) => !h.hasRobber);
+      const randomHex = hexesWithoutRobber[Math.floor(Math.random() * hexesWithoutRobber.length)];
+      const playersToSteal = getPlayersToStealFrom(gameState!, randomHex.id, gameState!.currentPlayerId);
+      const stealFrom = playersToSteal.length > 0 ? playersToSteal[Math.floor(Math.random() * playersToSteal.length)] : null;
+      playKnightCard(randomHex.id, stealFrom);
+    } else if (cardType === DevCardType.YEAR_OF_PLENTY) {
+      setActiveDevCardModal(DevCardType.YEAR_OF_PLENTY);
+    } else if (cardType === DevCardType.MONOPOLY) {
+      setActiveDevCardModal(DevCardType.MONOPOLY);
+    } else if (cardType === DevCardType.ROAD_BUILDING) {
+      setActiveDevCardModal(DevCardType.ROAD_BUILDING);
+    }
+  };
+
+  const handleYearOfPlentyConfirm = (resources: ResourceType[]) => {
+    playYearOfPlentyCard(resources);
+    setActiveDevCardModal(null);
+  };
+
+  const handleMonopolyConfirm = (resourceType: ResourceType) => {
+    playMonopolyCard(resourceType);
+    setActiveDevCardModal(null);
+  };
+
+  const handleRoadBuildingStart = () => {
+    setActiveDevCardModal(null);
+    setIsRoadBuildingMode(true);
+    setRoadBuildingEdges([]);
+    // Highlight available road positions
+    if (gameState) {
+      const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+      if (currentPlayer) {
+        highlightAvailablePositions('road');
+      }
+    }
+  };
+
+  const handleRoadBuildingConfirm = () => {
+    if (roadBuildingEdges.length > 0) {
+      playRoadBuildingCard(roadBuildingEdges);
+      setIsRoadBuildingMode(false);
+      setRoadBuildingEdges([]);
+      clearHighlights();
+    }
+  };
+
+  const handleRoadBuildingCancel = () => {
+    setIsRoadBuildingMode(false);
+    setRoadBuildingEdges([]);
+    clearHighlights();
+  };
+  // END_BLOCK_DEV_CARD_HANDLERS
 
   // START_BLOCK_PHASE_INSTRUCTION
   // Описание: Инструкции для текущей фазы игры
 
   let phaseInstruction = '';
 
-  if (gameState.phase === GamePhase.INITIAL_PLACEMENT) {
+  if (isRoadBuildingMode) {
+    phaseInstruction = `${currentPlayer.name}: Road Building - Select edges (${roadBuildingEdges.length}/2)`;
+  } else if (gameState.phase === GamePhase.INITIAL_PLACEMENT) {
     if (buildMode === 'settlement') {
       phaseInstruction = `${currentPlayer.name}: Place your ${
         gameState.initialPlacementRound === 1 ? 'first' : 'second'
@@ -271,8 +454,10 @@ export default function GamePage() {
             gameState={gameState}
             onVertexClick={handleVertexClick}
             onEdgeClick={handleEdgeClick}
+            onHexClick={handleHexClick}
             highlightedVertices={highlightedVertices}
             highlightedEdges={highlightedEdges}
+            highlightedHexes={highlightedHexes}
           />
         </div>
         {/* END_BLOCK_BOARD */}
@@ -319,7 +504,32 @@ export default function GamePage() {
           <div className="bg-gray-800 rounded-lg p-4">
             <h2 className="text-xl font-bold mb-2">Actions</h2>
 
-            {gameState.phase === GamePhase.MAIN_GAME &&
+            {isRoadBuildingMode && (
+              <div className="space-y-2">
+                <p className="text-yellow-400 font-bold">
+                  Road Building Active
+                </p>
+                <p className="text-gray-300 text-sm">
+                  Roads selected: {roadBuildingEdges.length}/2
+                </p>
+                <button
+                  onClick={handleRoadBuildingConfirm}
+                  disabled={roadBuildingEdges.length === 0}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded"
+                >
+                  Confirm ({roadBuildingEdges.length} roads)
+                </button>
+                <button
+                  onClick={handleRoadBuildingCancel}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {!isRoadBuildingMode &&
+              gameState.phase === GamePhase.MAIN_GAME &&
               gameState.turnPhase === 'ACTIONS' && (
                 <div className="space-y-2">
                   <button
@@ -339,6 +549,12 @@ export default function GamePage() {
                     className="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded"
                   >
                     Build City
+                  </button>
+                  <button
+                    onClick={buyDevCard}
+                    className="w-full bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Buy Dev Card
                   </button>
                   <button
                     onClick={clearHighlights}
@@ -369,6 +585,17 @@ export default function GamePage() {
             )}
           </div>
           {/* END_BLOCK_ACTION_PANEL */}
+
+          {/* START_BLOCK_DEV_CARD_PANEL */}
+          {/* Описание: Панель с картами развития */}
+          {gameState.phase === GamePhase.MAIN_GAME && (
+            <DevCardPanel
+              player={currentPlayer}
+              onPlayCard={handlePlayDevCard}
+              canPlayCards={gameState.turnPhase === 'ACTIONS'}
+            />
+          )}
+          {/* END_BLOCK_DEV_CARD_PANEL */}
 
           {/* START_BLOCK_CURRENT_PLAYER_INFO */}
           {/* Описание: Информация о текущем игроке */}
@@ -402,6 +629,50 @@ export default function GamePage() {
         </div>
         {/* END_BLOCK_RIGHT_PANEL */}
       </div>
+
+      {/* START_BLOCK_DISCARD_MODAL */}
+      {/* Описание: Модальное окно для сброса ресурсов */}
+      {playersNeedingDiscard.length > 0 &&
+        playersNeedingDiscard.map((playerId) => {
+          const player = gameState.players.find((p) => p.id === playerId);
+          if (!player || player.type === 'AI') return null;
+
+          const discardAmount = calculateDiscardAmount(player);
+
+          return (
+            <DiscardResourcesModal
+              key={playerId}
+              player={player}
+              discardAmount={discardAmount}
+              onDiscard={(resources) => discardResources(playerId, resources)}
+            />
+          );
+        })}
+      {/* END_BLOCK_DISCARD_MODAL */}
+
+      {/* START_BLOCK_DEV_CARD_MODALS */}
+      {/* Описание: Модальные окна для карт развития */}
+      {activeDevCardModal === DevCardType.YEAR_OF_PLENTY && (
+        <YearOfPlentyModal
+          onConfirm={handleYearOfPlentyConfirm}
+          onCancel={() => setActiveDevCardModal(null)}
+        />
+      )}
+
+      {activeDevCardModal === DevCardType.MONOPOLY && (
+        <MonopolyModal
+          onConfirm={handleMonopolyConfirm}
+          onCancel={() => setActiveDevCardModal(null)}
+        />
+      )}
+
+      {activeDevCardModal === DevCardType.ROAD_BUILDING && (
+        <RoadBuildingModal
+          onStart={handleRoadBuildingStart}
+          onCancel={() => setActiveDevCardModal(null)}
+        />
+      )}
+      {/* END_BLOCK_DEV_CARD_MODALS */}
     </div>
   );
 }

@@ -31,12 +31,18 @@ import {
   handleBuildRoad,
   handleBuildSettlement,
   handleBuildCity,
+  handleBuyDevCard,
+  handlePlayKnight,
+  handlePlayYearOfPlenty,
+  handlePlayMonopoly,
+  handlePlayRoadBuilding,
 } from '@/lib/game-logic/actionHandlers';
 import {
   handleMoveRobber,
   handleStealResource,
   handleDiscardResources,
   needsToDiscardResources,
+  calculateDiscardAmount,
   getPlayersToStealFrom,
 } from '@/lib/game-logic/robberHandlers';
 import { PLAYER_COLORS } from '@/lib/constants/game.constants';
@@ -57,6 +63,7 @@ interface GameStore {
   highlightedEdges: string[];
   highlightedHexes: string[];
   buildMode: 'road' | 'settlement' | 'city' | null;
+  playersNeedingDiscard: string[]; // IDs игроков, которые должны сбросить ресурсы
 
   // Actions - Game management
   initializeGame: (playerNames: string[], aiCount: number) => void;
@@ -69,6 +76,13 @@ interface GameStore {
   // Actions - Robber mechanics
   moveRobber: (hexId: string, stealFromPlayerId: string | null) => void;
   discardResources: (playerId: string, resources: Partial<Record<import('@/types/game.types').ResourceType, number>>) => void;
+
+  // Actions - Development Cards
+  buyDevCard: () => void;
+  playKnightCard: (hexId: string, stealFromPlayerId: string | null) => void;
+  playYearOfPlentyCard: (resources: ResourceType[]) => void;
+  playMonopolyCard: (resourceType: ResourceType) => void;
+  playRoadBuildingCard: (edgeIds: string[]) => void;
 
   // Actions - UI state
   setSelectedHex: (hexId: string | null) => void;
@@ -99,6 +113,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   highlightedEdges: [],
   highlightedHexes: [],
   buildMode: null,
+  playersNeedingDiscard: [],
 
   // ============================================================================
   // GAME ACTIONS
@@ -198,14 +213,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.log('[GameStore][rollDice][SUCCESS]', { dice, sum });
     } else {
       // Активация разбойника (Phase 5)
+      // Проверить какие игроки должны сбросить ресурсы
+      const playersToDiscard = state.players
+        .filter((p) => needsToDiscardResources(p))
+        .map((p) => p.id);
+
       set({
         gameState: {
           ...state,
           lastDiceRoll: dice,
           turnPhase: TurnPhase.ROBBER_ACTIVATION,
         },
+        playersNeedingDiscard: playersToDiscard,
       });
-      console.log('[GameStore][rollDice][ROBBER_ACTIVATED]', { dice, sum });
+      console.log('[GameStore][rollDice][ROBBER_ACTIVATED]', { dice, sum, playersToDiscard });
     }
     // END_BLOCK_RESOURCE_DISTRIBUTION
   },
@@ -231,7 +252,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
     if (!currentPlayer) return;
 
-    const newState = handleBuildRoad(currentPlayer.id, edgeId, state);
+    const isInitialPlacement = state.phase === GamePhase.INITIAL_PLACEMENT;
+    const newState = handleBuildRoad(currentPlayer.id, edgeId, state, isInitialPlacement);
 
     // Проверка что начальная расстановка: если построили дорогу - переход к следующему игроку
     if (newState.phase === GamePhase.INITIAL_PLACEMENT) {
@@ -309,7 +331,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
     if (!currentPlayer) return;
 
-    const newState = handleBuildSettlement(currentPlayer.id, vertexId, state);
+    const isInitialPlacement = state.phase === GamePhase.INITIAL_PLACEMENT;
+    const newState = handleBuildSettlement(currentPlayer.id, vertexId, state, isInitialPlacement);
 
     // Начальная расстановка: после строительства поселения показать доступные ребра для дороги
     if (newState.phase === GamePhase.INITIAL_PLACEMENT) {
@@ -658,9 +681,155 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const newState = handleDiscardResources(state, playerId, resources);
 
-    set({ gameState: newState });
+    // Убрать игрока из списка ожидающих сброса
+    const remainingPlayers = get().playersNeedingDiscard.filter(id => id !== playerId);
 
-    console.log('[GameStore][discardResources][SUCCESS]');
+    set({
+      gameState: newState,
+      playersNeedingDiscard: remainingPlayers,
+    });
+
+    console.log('[GameStore][discardResources][SUCCESS]', {
+      remainingPlayers: remainingPlayers.length,
+    });
+  },
+
+  // ============================================================================
+  // DEVELOPMENT CARD ACTIONS
+  // ============================================================================
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Купить карту развития
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, вычитает ресурсы, добавляет карту
+   * KEYWORDS: development card, buy
+   */
+  buyDevCard: () => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][buyDevCard][START]');
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handleBuyDevCard(currentPlayer.id, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][buyDevCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Knight
+   * INPUTS:
+   *   - hexId: string - ID гексагона для размещения разбойника
+   *   - stealFromPlayerId: string | null - ID игрока для кражи
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, перемещает разбойника, крадет ресурс
+   * KEYWORDS: knight, development card, robber
+   */
+  playKnightCard: (hexId: string, stealFromPlayerId: string | null) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playKnightCard][START]', { hexId, stealFromPlayerId });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayKnight(
+      currentPlayer.id,
+      hexId,
+      stealFromPlayerId,
+      state
+    );
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playKnightCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Year of Plenty (взять 2 ресурса из банка)
+   * INPUTS:
+   *   - resources: ResourceType[] - массив из 2 ресурсов для получения
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, добавляет ресурсы
+   * KEYWORDS: year of plenty, development card, resources
+   */
+  playYearOfPlentyCard: (resources: ResourceType[]) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playYearOfPlentyCard][START]', { resources });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayYearOfPlenty(currentPlayer.id, resources, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playYearOfPlentyCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Monopoly (собрать все ресурсы одного типа)
+   * INPUTS:
+   *   - resourceType: ResourceType - тип ресурса для сбора
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, собирает ресурсы
+   * KEYWORDS: monopoly, development card, resources
+   */
+  playMonopolyCard: (resourceType: ResourceType) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playMonopolyCard][START]', { resourceType });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayMonopoly(currentPlayer.id, resourceType, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playMonopolyCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Road Building (построить 2 бесплатные дороги)
+   * INPUTS:
+   *   - edgeIds: string[] - массив из 1-2 ID ребер для дорог
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, строит дороги
+   * KEYWORDS: road building, development card, roads
+   */
+  playRoadBuildingCard: (edgeIds: string[]) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playRoadBuildingCard][START]', { edgeIds });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayRoadBuilding(currentPlayer.id, edgeIds, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playRoadBuildingCard][SUCCESS]');
+    }
   },
 }));
 
