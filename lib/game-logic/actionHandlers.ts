@@ -14,6 +14,7 @@ import {
   BuildingType,
   DevCardType,
   ResourceBundle,
+  Player,
 } from '@/types/game.types';
 import {
   canBuildRoad,
@@ -443,10 +444,10 @@ function updateLargestArmy(gameState: GameState, playerId: string): GameState {
  * KEYWORDS: steal resource, robber
  */
 function stealRandomResource(
-  players: typeof import('@/types/game.types').Player[],
+  players: Player[],
   stealerId: string,
   victimId: string
-): typeof import('@/types/game.types').Player[] {
+): Player[] {
   const victim = players.find((p) => p.id === victimId);
   if (!victim) return players;
 

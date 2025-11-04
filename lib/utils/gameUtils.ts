@@ -15,11 +15,15 @@ import {
   GamePhase,
   TurnPhase,
   DevCardType,
+  BuildingType,
+  Hex,
+  Vertex,
+  Edge,
 } from '@/types/game.types';
 import {
   GAME_CONSTANTS,
-  PLAYER_COLORS,
   DEV_CARD_DECK,
+  TERRAIN_TO_RESOURCE,
 } from '@/lib/constants/game.constants';
 
 /**
@@ -101,9 +105,9 @@ export function createPlayer(
  */
 export function createInitialGameState(
   players: Player[],
-  hexes: typeof import('@/types/game.types').Hex[],
-  vertices: typeof import('@/types/game.types').Vertex[],
-  edges: typeof import('@/types/game.types').Edge[]
+  hexes: Hex[],
+  vertices: Vertex[],
+  edges: Edge[]
 ): GameState {
   // START_BLOCK_DEV_CARD_DECK_CREATION
   // Описание: Создание и перемешивание колоды карт развития
@@ -338,6 +342,88 @@ export function getAvailableRoadPositions(
   // END_BLOCK_FILTER_EDGES
 
   return availableEdges;
+}
+
+/**
+ * FUNCTION_CONTRACT:
+ * PURPOSE: Распределить ресурсы игрокам на основе броска кубиков
+ * INPUTS:
+ *   - diceSum: number - сумма броска кубиков (2-12)
+ *   - gameState: GameState - текущее состояние игры
+ * OUTPUTS: GameState - новое состояние с обновленными ресурсами игроков
+ * SIDE_EFFECTS: None
+ * KEYWORDS: resource distribution, dice roll
+ */
+export function distributeResources(diceSum: number, gameState: GameState): GameState {
+  console.log('[GameUtils][distributeResources][START]', { diceSum });
+
+  // START_BLOCK_ACTIVE_HEXES_FILTER
+  // Описание: Найти все гексагоны с номером равным diceSum (без разбойника)
+
+  const activeHexes = gameState.hexes.filter(
+    (hex) => hex.number === diceSum && !hex.hasRobber
+  );
+
+  if (activeHexes.length === 0) {
+    console.log('[GameUtils][distributeResources][INFO]', {
+      message: 'No active hexes for this roll',
+    });
+    return gameState;
+  }
+  // END_BLOCK_ACTIVE_HEXES_FILTER
+
+  // START_BLOCK_RESOURCE_COLLECTION
+  // Описание: Для каждого активного гексагона найти постройки на вершинах и добавить ресурсы
+
+  const updatedPlayers = [...gameState.players];
+
+  activeHexes.forEach((hex) => {
+    const resource = TERRAIN_TO_RESOURCE[hex.terrain];
+    if (!resource) return; // Пустыня не дает ресурсов
+
+    // Найти вершины этого гексагона
+    hex.vertexIds.forEach((vertexId) => {
+      const vertex = gameState.vertices.find((v) => v.id === vertexId);
+      if (!vertex || !vertex.building) return;
+
+      // Найти игрока-владельца постройки
+      const playerIndex = updatedPlayers.findIndex(
+        (p) => p.id === vertex.building!.playerId
+      );
+      if (playerIndex === -1) return;
+
+      // Определить количество ресурсов (поселение = 1, город = 2)
+      const resourceCount =
+        vertex.building.type === BuildingType.SETTLEMENT ? 1 : 2;
+
+      // Добавить ресурсы игроку (immutable update)
+      updatedPlayers[playerIndex] = {
+        ...updatedPlayers[playerIndex],
+        resources: {
+          ...updatedPlayers[playerIndex].resources,
+          [resource]:
+            updatedPlayers[playerIndex].resources[resource] + resourceCount,
+        },
+      };
+
+      console.log('[GameUtils][distributeResources][RESOURCE_ADDED]', {
+        playerId: vertex.building.playerId,
+        resource,
+        amount: resourceCount,
+        hexId: hex.id,
+      });
+    });
+  });
+  // END_BLOCK_RESOURCE_COLLECTION
+
+  console.log('[GameUtils][distributeResources][SUCCESS]', {
+    activeHexCount: activeHexes.length,
+  });
+
+  return {
+    ...gameState,
+    players: updatedPlayers,
+  };
 }
 
 /**

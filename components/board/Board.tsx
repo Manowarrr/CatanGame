@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { GameState } from '@/types/game.types';
 import { Hex } from './Hex';
 import { Vertex } from './Vertex';
@@ -126,9 +126,11 @@ export function Board({
   return (
     <div className="flex items-center justify-center p-8">
       <svg
+        width="800"
+        height="700"
         viewBox="0 0 800 700"
-        className="max-w-full h-auto"
-        style={{ maxHeight: '80vh' }}
+        className="border border-gray-600"
+        style={{ maxHeight: '80vh', maxWidth: '100%' }}
       >
         {/* START_BLOCK_HEX_RENDERING */}
         {/* Описание: Рендеринг всех гексагонов */}
