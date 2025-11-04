@@ -21,7 +21,13 @@ import {
   chooseInitialRoad,
   decideMainGameAction,
 } from '@/lib/ai/basicAI';
-import { getPlayersToStealFrom } from '@/lib/game-logic/robberHandlers';
+import {
+  getPlayersToStealFrom,
+  needsToDiscardResources,
+  calculateDiscardAmount,
+} from '@/lib/game-logic/robberHandlers';
+import { DiscardResourcesModal } from '@/components/ui/DiscardResourcesModal';
+import { ResourceType } from '@/types/game.types';
 
 /**
  * FUNCTION_CONTRACT:
@@ -47,6 +53,8 @@ export default function GamePage() {
   const highlightedVertices = useGameStore((state) => state.highlightedVertices);
   const highlightedEdges = useGameStore((state) => state.highlightedEdges);
   const highlightedHexes = useGameStore((state) => state.highlightedHexes);
+  const playersNeedingDiscard = useGameStore((state) => state.playersNeedingDiscard);
+  const discardResources = useGameStore((state) => state.discardResources);
 
   // START_BLOCK_GAME_INITIALIZATION
   // Описание: Инициализация игры при монтировании компонента
@@ -162,6 +170,60 @@ export default function GamePage() {
     };
   }, [gameState, rollDice, endTurn, buildRoad, buildSettlement, buildCity]);
   // END_BLOCK_AI_MAIN_GAME
+
+  // START_BLOCK_AI_DISCARD_RESOURCES
+  // Описание: AI автоматически сбрасывает ресурсы при выпадении 7
+
+  useEffect(() => {
+    if (!gameState || playersNeedingDiscard.length === 0) return;
+
+    // Найти первого AI игрока, который должен сбросить ресурсы
+    const aiPlayerToDiscard = playersNeedingDiscard.find((playerId) => {
+      const player = gameState.players.find((p) => p.id === playerId);
+      return player?.type === 'AI';
+    });
+
+    if (!aiPlayerToDiscard) return;
+
+    // Очистить предыдущий таймер
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+    }
+
+    // AI сбрасывает ресурсы через 1 секунду
+    aiTimeoutRef.current = setTimeout(() => {
+      const player = gameState.players.find((p) => p.id === aiPlayerToDiscard);
+      if (!player) return;
+
+      const discardAmount = calculateDiscardAmount(player);
+      const resourcesToDiscard: Partial<Record<ResourceType, number>> = {};
+
+      // Сбросить случайные ресурсы
+      let remainingToDiscard = discardAmount;
+      const availableResources: ResourceType[] = [];
+
+      Object.entries(player.resources).forEach(([resource, count]) => {
+        for (let i = 0; i < count; i++) {
+          availableResources.push(resource as ResourceType);
+        }
+      });
+
+      // Перемешать и взять нужное количество
+      const shuffled = availableResources.sort(() => Math.random() - 0.5);
+      shuffled.slice(0, remainingToDiscard).forEach((resource) => {
+        resourcesToDiscard[resource] = (resourcesToDiscard[resource] || 0) + 1;
+      });
+
+      discardResources(aiPlayerToDiscard, resourcesToDiscard);
+    }, 1000);
+
+    return () => {
+      if (aiTimeoutRef.current) {
+        clearTimeout(aiTimeoutRef.current);
+      }
+    };
+  }, [gameState, playersNeedingDiscard, discardResources]);
+  // END_BLOCK_AI_DISCARD_RESOURCES
 
   // START_BLOCK_LOADING_STATE
   // Описание: Показать загрузку если игра не инициализирована
@@ -433,6 +495,26 @@ export default function GamePage() {
         </div>
         {/* END_BLOCK_RIGHT_PANEL */}
       </div>
+
+      {/* START_BLOCK_DISCARD_MODAL */}
+      {/* Описание: Модальное окно для сброса ресурсов */}
+      {playersNeedingDiscard.length > 0 &&
+        playersNeedingDiscard.map((playerId) => {
+          const player = gameState.players.find((p) => p.id === playerId);
+          if (!player || player.type === 'AI') return null;
+
+          const discardAmount = calculateDiscardAmount(player);
+
+          return (
+            <DiscardResourcesModal
+              key={playerId}
+              player={player}
+              discardAmount={discardAmount}
+              onDiscard={(resources) => discardResources(playerId, resources)}
+            />
+          );
+        })}
+      {/* END_BLOCK_DISCARD_MODAL */}
     </div>
   );
 }

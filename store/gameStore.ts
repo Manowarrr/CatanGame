@@ -37,6 +37,7 @@ import {
   handleStealResource,
   handleDiscardResources,
   needsToDiscardResources,
+  calculateDiscardAmount,
   getPlayersToStealFrom,
 } from '@/lib/game-logic/robberHandlers';
 import { PLAYER_COLORS } from '@/lib/constants/game.constants';
@@ -57,6 +58,7 @@ interface GameStore {
   highlightedEdges: string[];
   highlightedHexes: string[];
   buildMode: 'road' | 'settlement' | 'city' | null;
+  playersNeedingDiscard: string[]; // IDs игроков, которые должны сбросить ресурсы
 
   // Actions - Game management
   initializeGame: (playerNames: string[], aiCount: number) => void;
@@ -99,6 +101,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   highlightedEdges: [],
   highlightedHexes: [],
   buildMode: null,
+  playersNeedingDiscard: [],
 
   // ============================================================================
   // GAME ACTIONS
@@ -198,14 +201,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.log('[GameStore][rollDice][SUCCESS]', { dice, sum });
     } else {
       // Активация разбойника (Phase 5)
+      // Проверить какие игроки должны сбросить ресурсы
+      const playersToDiscard = state.players
+        .filter((p) => needsToDiscardResources(p))
+        .map((p) => p.id);
+
       set({
         gameState: {
           ...state,
           lastDiceRoll: dice,
           turnPhase: TurnPhase.ROBBER_ACTIVATION,
         },
+        playersNeedingDiscard: playersToDiscard,
       });
-      console.log('[GameStore][rollDice][ROBBER_ACTIVATED]', { dice, sum });
+      console.log('[GameStore][rollDice][ROBBER_ACTIVATED]', { dice, sum, playersToDiscard });
     }
     // END_BLOCK_RESOURCE_DISTRIBUTION
   },
@@ -660,9 +669,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const newState = handleDiscardResources(state, playerId, resources);
 
-    set({ gameState: newState });
+    // Убрать игрока из списка ожидающих сброса
+    const remainingPlayers = get().playersNeedingDiscard.filter(id => id !== playerId);
 
-    console.log('[GameStore][discardResources][SUCCESS]');
+    set({
+      gameState: newState,
+      playersNeedingDiscard: remainingPlayers,
+    });
+
+    console.log('[GameStore][discardResources][SUCCESS]', {
+      remainingPlayers: remainingPlayers.length,
+    });
   },
 }));
 
