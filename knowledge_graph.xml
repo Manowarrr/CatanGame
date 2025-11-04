@@ -1,0 +1,859 @@
+<KnowledgeGraph>
+  <CatanProject_V1_Info VERSION="1.0.0-dev">
+    <keywords>Next.js:9|TypeScript:9|Catan:8|board_game_simulation:8|state_management:7|AI_opponent:7</keywords>
+    <terms>hex_grid_rendering|game_state_management|rule_validation|resource_calculation|player_interaction|ai_strategy</terms>
+    <annotation>Высокоуровневый граф знаний проекта Catan, покрывающий представление данных, игровую логику, визуализацию и взаимодействие с пользователем для RAG-агента. Проект в активной разработке: Phase 0-3 завершены, Phase 4-8 в разработке.</annotation>
+    <ProjectStatus PHASES_COMPLETE="0-3" PHASES_IN_PROGRESS="4" PHASES_REMAINING="5-8" COMPLETION_PERCENT="44"/>
+    <DevProgress>
+      <Phase0 STATUS="COMPLETED" DESC="Infrastructure: Next.js, TypeScript, Tailwind CSS"/>
+      <Phase1 STATUS="COMPLETED" DESC="Data Models: Types, interfaces, constants"/>
+      <Phase2 STATUS="COMPLETED" DESC="Core Game Logic: Generators, validators, calculators, handlers"/>
+      <Phase3 STATUS="COMPLETED" DESC="UI Foundation: Board, Hex, Vertex, Edge, PlayerPanel"/>
+      <Phase4 STATUS="PLANNED" DESC="Basic Gameplay: Zustand store, initial placement, dice roll"/>
+      <Phase5 STATUS="PLANNED" DESC="Advanced Mechanics: Trading, dev cards, robber, badges"/>
+      <Phase6 STATUS="PLANNED" DESC="AI Opponent: Heuristics, decision-making"/>
+      <Phase7 STATUS="PLANNED" DESC="Achievements: Statistics, game history"/>
+      <Phase8 STATUS="PLANNED" DESC="Polish: Animations, sounds, UX improvements"/>
+    </DevProgress>
+
+    <types_game_types_ts_py FILE="types/game.types.ts" TYPE="DOMAIN_MODEL_MODULE">
+      <keywords>TypeScript_types:9|game_state_schema:9|enum_definitions:8|interfaces:8</keywords>
+      <terms>ResourceType_enum|GameState_interface|Player_model|DevCardType_enum</terms>
+      <annotation>Центральный модуль типизации, описывающий все игровые сущности, состояния и допустимые действия.</annotation>
+      <types_game_types_ResourceType_ENUM NAME="ResourceType" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>resources:9|enum:8|economy:7</keywords>
+        <terms>WOOD|BRICK|SHEEP|WHEAT|ORE</terms>
+        <annotation>Перечисление базовых ресурсов, используемое для стоимости построек, распределения добычи и торговли.</annotation>
+      </types_game_types_ResourceType_ENUM>
+      <types_game_types_TerrainType_ENUM NAME="TerrainType" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>terrain:9|hex_map:8|resource_output:7</keywords>
+        <terms>FOREST|HILLS|PASTURE|FIELDS|MOUNTAINS|DESERT</terms>
+        <annotation>Определяет типы местности гексагонов и связывает их с ресурсами и поведением разбойника.</annotation>
+      </types_game_types_TerrainType_ENUM>
+      <types_game_types_BuildingType_ENUM NAME="BuildingType" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>buildings:8|settlement:8|city:7</keywords>
+        <terms>SETTLEMENT|CITY</terms>
+        <annotation>Различает поселения и города, определяя их ценность и визуализацию на поле.</annotation>
+      </types_game_types_BuildingType_ENUM>
+      <types_game_types_DevCardType_ENUM NAME="DevCardType" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>development_cards:8|strategic_actions:7</keywords>
+        <terms>KNIGHT|VICTORY_POINT|ROAD_BUILDING|YEAR_OF_PLENTY|MONOPOLY</terms>
+        <annotation>Типы карт развития, влияющие на доступные игроку действия и подсчёт очков.</annotation>
+      </types_game_types_DevCardType_ENUM>
+      <types_game_types_PlayerType_ENUM NAME="PlayerType" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>player_kind:7|human_vs_ai:7</keywords>
+        <terms>HUMAN|AI</terms>
+        <annotation>Определяет, управляется ли игрок человеком или ИИ.</annotation>
+      </types_game_types_PlayerType_ENUM>
+      <types_game_types_GamePhase_ENUM NAME="GamePhase" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>game_flow:8|phase_management:7</keywords>
+        <terms>INITIAL_PLACEMENT|MAIN_GAME|GAME_OVER</terms>
+        <annotation>Фазы партии, управляющие логикой смены хода и допустимыми действиями.</annotation>
+      </types_game_types_GamePhase_ENUM>
+      <types_game_types_TurnPhase_ENUM NAME="TurnPhase" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>turn_structure:8|dice_roll:7|actions:7</keywords>
+        <terms>DICE_ROLL|ROBBER_ACTIVATION|ACTIONS</terms>
+        <annotation>Подфазы хода игрока, используемые для управления интерфейсом и логикой.</annotation>
+      </types_game_types_TurnPhase_ENUM>
+      <types_game_types_Hex_INTERFACE NAME="Hex" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>hex_tile:9|board_geometry:8</keywords>
+        <terms>vertexIds|edgeIds|hasRobber|number</terms>
+        <annotation>Структура одного гексагона карты, включающая местность, номер токена и связи.</annotation>
+      </types_game_types_Hex_INTERFACE>
+      <types_game_types_Vertex_INTERFACE NAME="Vertex" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>vertex:9|building_slot:8|adjacency:7</keywords>
+        <terms>hexIds|neighborVertexIds|neighborEdgeIds|building</terms>
+        <annotation>Вершина игрового графа, в которой размещаются поселения и города.</annotation>
+      </types_game_types_Vertex_INTERFACE>
+      <types_game_types_Edge_INTERFACE NAME="Edge" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>edge:9|road_slot:8|graph_connection:7</keywords>
+        <terms>vertexIds|hexIds|road</terms>
+        <annotation>Ребро между вершинами, служащее местом для строительства дорог.</annotation>
+      </types_game_types_Edge_INTERFACE>
+      <types_game_types_Building_INTERFACE NAME="Building" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>building:8|ownership:7</keywords>
+        <terms>type|playerId</terms>
+        <annotation>Общее представление построек на вершинах, связывающее их с игроком.</annotation>
+      </types_game_types_Building_INTERFACE>
+      <types_game_types_Road_INTERFACE NAME="Road" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>road:8|ownership:7</keywords>
+        <terms>playerId</terms>
+        <annotation>Модель дороги, размещённой на ребре и принадлежащей игроку.</annotation>
+      </types_game_types_Road_INTERFACE>
+      <types_game_types_Player_INTERFACE NAME="Player" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>player_state:9|inventory:8|achievements:7</keywords>
+        <terms>resources|devCards|victoryPoints|hasLongestRoad|hasLargestArmy</terms>
+        <annotation>Полная модель игрока, включающая ресурсы, постройки, карты и достижения.</annotation>
+      </types_game_types_Player_INTERFACE>
+      <types_game_types_DevelopmentCard_INTERFACE NAME="DevelopmentCard" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>dev_card:7|play_restrictions:6</keywords>
+        <terms>type|canPlayThisTurn</terms>
+        <annotation>Расширенная информация о карте развития, включая возможность розыгрыша.</annotation>
+      </types_game_types_DevelopmentCard_INTERFACE>
+      <types_game_types_TradeOffer_INTERFACE NAME="TradeOffer" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>trade:7|negotiation:6</keywords>
+        <terms>offering|requesting|playerId</terms>
+        <annotation>Структура предложения обмена между игроками или с банком.</annotation>
+      </types_game_types_TradeOffer_INTERFACE>
+      <types_game_types_GameState_INTERFACE NAME="GameState" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>game_state:9|turn_tracking:8|board_snapshot:8</keywords>
+        <terms>phase|players|hexes|vertices|edges|devCardDeck|turnNumber</terms>
+        <annotation>Главное состояние игры, агрегирующее всю информацию о партии и текущем ходе.</annotation>
+      </types_game_types_GameState_INTERFACE>
+      <types_game_types_DeepPartial_TYPE NAME="DeepPartial" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>utility_type:7|partial_updates:6</keywords>
+        <terms>recursive_optional</terms>
+        <annotation>Рекурсивный тип для частичного обновления сложных структур состояния.</annotation>
+      </types_game_types_DeepPartial_TYPE>
+      <types_game_types_ResourceBundle_TYPE NAME="ResourceBundle" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>resource_bundle:7|inventory_delta:6</keywords>
+        <terms>PartialRecord&lt;ResourceType,number&gt;</terms>
+        <annotation>Частичная мапа ресурсов, применяемая при расходах и обменах.</annotation>
+      </types_game_types_ResourceBundle_TYPE>
+      <types_game_types_ValidationResult_INTERFACE NAME="ValidationResult" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>validation:8|error_reporting:7</keywords>
+        <terms>valid|error</terms>
+        <annotation>Унифицированный ответ валидационных функций с флагом и сообщением об ошибке.</annotation>
+      </types_game_types_ValidationResult_INTERFACE>
+      <types_game_types_GameAction_TYPE NAME="GameAction" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>action_union:8|command_pattern:7</keywords>
+        <terms>ROLL_DICE|BUILD_ROAD|BUILD_SETTLEMENT|BUILD_CITY|BUY_DEV_CARD|PLAY_DEV_CARD|END_TURN|TRADE_WITH_BANK|MOVE_ROBBER</terms>
+        <annotation>Юнион всех игровых команд, используемый для диспетчеризации событий.</annotation>
+      </types_game_types_GameAction_TYPE>
+      <types_game_types_InitialPlacement_INTERFACE NAME="InitialPlacement" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>initial_setup:7|placement:6</keywords>
+        <terms>vertexId|edgeId</terms>
+        <annotation>Описание позиции для стартовой расстановки поселения и дороги.</annotation>
+      </types_game_types_InitialPlacement_INTERFACE>
+    </types_game_types_ts_py>
+
+    <types_ai_types_ts_py FILE="types/ai.types.ts" TYPE="AI_DOMAIN_MODEL_MODULE">
+      <keywords>AI_types:9|decision_making:8|heuristics:8|strategy_model:7</keywords>
+      <terms>AIAction|AIStrategy|AIEvaluation|action_priority</terms>
+      <annotation>Типы для AI оппонента: модели действий, стратегий и оценок позиций для автоматизированной игры.</annotation>
+      <types_ai_types_AIAction_INTERFACE NAME="AIAction" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>ai_action:9|priority_scoring:8|decision_tree:7</keywords>
+        <terms>type|priority|params</terms>
+        <annotation>Описание возможного действия AI с приоритетом и параметрами для выполнения.</annotation>
+      </types_ai_types_AIAction_INTERFACE>
+      <types_ai_types_AIStrategy_INTERFACE NAME="AIStrategy" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>ai_strategy:8|resource_focus:7|expansion_plan:7</keywords>
+        <terms>targetResource|expansionVertices|developmentFocus</terms>
+        <annotation>Стратегический план AI: фокус на ресурсах, точки расширения и приоритет развития.</annotation>
+      </types_ai_types_AIStrategy_INTERFACE>
+      <types_ai_types_AIEvaluation_INTERFACE NAME="AIEvaluation" TYPE="IS_TYPE_OF_MODULE">
+        <keywords>position_evaluation:8|heuristic_score:7</keywords>
+        <terms>vertexId|score|reasoning</terms>
+        <annotation>Оценка позиции на карте AI с численным скором и объяснением для отладки.</annotation>
+      </types_ai_types_AIEvaluation_INTERFACE>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Расширяет базовые типы игры для нужд AI"/>
+      </CrossLinks>
+    </types_ai_types_ts_py>
+
+    <lib_constants_game_constants_ts_py FILE="lib/constants/game.constants.ts" TYPE="CONFIGURATION_MODULE">
+      <keywords>game_constants:9|rulebook:8|resource_payouts:7|probabilities:7</keywords>
+      <terms>GAME_CONSTANTS|BUILDING_COSTS|DEV_CARD_DECK|HEX_GRID_ROWS|PLAYER_COLORS</terms>
+      <annotation>Хранилище неизменяемых параметров игры, определяющих экономику, достижения и генерацию карты.</annotation>
+      <lib_constants_game_constants_GAME_CONSTANTS_CONST NAME="GAME_CONSTANTS" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>victory_rules:9|initial_inventory:8|trade_ratios:7</keywords>
+        <terms>VICTORY_POINTS_TO_WIN|INITIAL_PIECES|ROBBER|TRADE_RATIOS</terms>
+        <annotation>Комплекс базовых правил партии, включая цели, стартовые значения и ограничения разбойника.</annotation>
+      </lib_constants_game_constants_GAME_CONSTANTS_CONST>
+      <lib_constants_game_constants_BUILDING_COSTS_CONST NAME="BUILDING_COSTS" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>costs:9|construction:8|resource_consumption:7</keywords>
+        <terms>ROAD|SETTLEMENT|CITY|DEV_CARD</terms>
+        <annotation>Стоимость построек и карт развития, используемая в валидациях и обработчиках действий.</annotation>
+      </lib_constants_game_constants_BUILDING_COSTS_CONST>
+      <lib_constants_game_constants_TERRAIN_DISTRIBUTION_CONST NAME="TERRAIN_DISTRIBUTION" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>map_setup:8|terrain_balance:7</keywords>
+        <terms>FOREST:4|HILLS:3|PASTURE:4|FIELDS:4|MOUNTAINS:3|DESERT:1</terms>
+        <annotation>Распределение типов местности по карте для генерации 19 гексагонов.</annotation>
+      </lib_constants_game_constants_TERRAIN_DISTRIBUTION_CONST>
+      <lib_constants_game_constants_NUMBER_TOKENS_CONST NAME="NUMBER_TOKENS" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>dice_tokens:8|probabilities:7</keywords>
+        <terms>2|3|4|5|6|8|9|10|11|12</terms>
+        <annotation>Список токенов чисел, назначаемых гексагонам с учётом вероятностей броска.</annotation>
+      </lib_constants_game_constants_NUMBER_TOKENS_CONST>
+      <lib_constants_game_constants_TERRAIN_TO_RESOURCE_CONST NAME="TERRAIN_TO_RESOURCE" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>resource_mapping:8|terrain_conversion:7</keywords>
+        <terms>FOREST-&gt;WOOD|HILLS-&gt;BRICK|PASTURE-&gt;SHEEP|FIELDS-&gt;WHEAT|MOUNTAINS-&gt;ORE|DESERT-&gt;null</terms>
+        <annotation>Соответствие местности и выдаваемого ресурса при добыче.</annotation>
+      </lib_constants_game_constants_TERRAIN_TO_RESOURCE_CONST>
+      <lib_constants_game_constants_DEV_CARD_DECK_CONST NAME="DEV_CARD_DECK" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>dev_cards:8|deck_composition:7</keywords>
+        <terms>KNIGHT:14|VICTORY_POINT:5|ROAD_BUILDING:2|YEAR_OF_PLENTY:2|MONOPOLY:2</terms>
+        <annotation>Конфигурация колоды карт развития для инициализации игры.</annotation>
+      </lib_constants_game_constants_DEV_CARD_DECK_CONST>
+      <lib_constants_game_constants_PLAYER_COLORS_CONST NAME="PLAYER_COLORS" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>ui_palette:7|player_identity:6</keywords>
+        <terms>#FF6B6B|#4ECDC4|#45B7D1|#FFA07A</terms>
+        <annotation>Предустановленные цвета для игроков для визуализации интерфейса.</annotation>
+      </lib_constants_game_constants_PLAYER_COLORS_CONST>
+      <lib_constants_game_constants_HEX_GRID_ROWS_CONST NAME="HEX_GRID_ROWS" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>map_layout:8|offset_grid:7</keywords>
+        <terms>[3,4,5,4,3]</terms>
+        <annotation>Количество гексагонов в каждом ряду offset-сетки для построения доски.</annotation>
+      </lib_constants_game_constants_HEX_GRID_ROWS_CONST>
+      <lib_constants_game_constants_DICE_PROBABILITIES_CONST NAME="DICE_PROBABILITIES" TYPE="IS_CONSTANT_OF_MODULE">
+        <keywords>probability_distribution:8|dice_analysis:7</keywords>
+        <terms>2:1/36|3:2/36|4:3/36|5:4/36|6:5/36|7:6/36|8:5/36|9:4/36|10:3/36|11:2/36|12:1/36</terms>
+        <annotation>Вероятности выпадения сумм двух кубиков для аналитики ИИ и UI-подсказок.</annotation>
+      </lib_constants_game_constants_DICE_PROBABILITIES_CONST>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Использует перечисления ресурсов, местностей и карт"/>
+      </CrossLinks>
+    </lib_constants_game_constants_ts_py>
+
+    <lib_utils_gameUtils_ts_py FILE="lib/utils/gameUtils.ts" TYPE="UTILITY_MODULE">
+      <keywords>game_setup:9|player_management:8|turn_helpers:8|rules_support:7</keywords>
+      <terms>rollDice|createPlayer|createInitialGameState|cloneGameState|turn_order_helpers</terms>
+      <annotation>Набор вспомогательных функций для инициализации игры, управления игроками и вычисления доступных действий.</annotation>
+      <lib_utils_gameUtils_rollDice_FUNC NAME="rollDice" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>dice_roll:9|randomness:7|logging:5</keywords>
+        <terms>two_dice|Math_random|sum_trace</terms>
+        <annotation>Генерирует результат броска двух кубиков и логирует значения для аудита.</annotation>
+        <INPUT_PARAMS>None</INPUT_PARAMS>
+        <OUTPUT_TYPE>[number, number]</OUTPUT_TYPE>
+      </lib_utils_gameUtils_rollDice_FUNC>
+      <lib_utils_gameUtils_createPlayer_FUNC NAME="createPlayer" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>player_factory:9|initial_inventory:8</keywords>
+        <terms>resources_seed|pieces_stock|achievement_flags</terms>
+        <annotation>Создаёт игрока с начальными ресурсами, лимитом построек и флагами достижений.</annotation>
+        <INPUT_PARAMS>id (string), name (string), color (string), type (PlayerType)</INPUT_PARAMS>
+        <OUTPUT_TYPE>Player</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="9" DESCRIPTION="Берёт стартовые ресурсы и доступные постройки"/>
+        </CrossLinks>
+      </lib_utils_gameUtils_createPlayer_FUNC>
+      <lib_utils_gameUtils_createInitialGameState_FUNC NAME="createInitialGameState" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>state_initialization:9|dev_card_shuffle:8|turn_setup:7</keywords>
+        <terms>GamePhase.INITIAL_PLACEMENT|devCardDeck|turnNumber</terms>
+        <annotation>Формирует объект GameState, перемешивая колоду карт развития и назначая стартующие значения.</annotation>
+        <INPUT_PARAMS>players (Player[]), hexes (Hex[]), vertices (Vertex[]), edges (Edge[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_DEV_CARD_DECK_CONST" TYPE="USES_DATA_FROM" RELEVANCE="9" DESCRIPTION="Создаёт колоду карт развития по заранее заданному составу"/>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Применяет правила фаз и стартовые значения"/>
+        </CrossLinks>
+      </lib_utils_gameUtils_createInitialGameState_FUNC>
+      <lib_utils_gameUtils_getPlayerById_FUNC NAME="getPlayerById" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>player_lookup:8|state_query:7</keywords>
+        <terms>Array.find|playerId</terms>
+        <annotation>Находит игрока в текущем состоянии по идентификатору, возвращая null при отсутствии.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>Player | null</OUTPUT_TYPE>
+      </lib_utils_gameUtils_getPlayerById_FUNC>
+      <lib_utils_gameUtils_getNextPlayer_FUNC NAME="getNextPlayer" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>turn_rotation:9|initial_placement_rules:8</keywords>
+        <terms>phase_sensitive|snake_order|round_tracking</terms>
+        <annotation>Определяет следующего игрока с учётом фазы начальной расстановки и стандартного кругового порядка.</annotation>
+        <INPUT_PARAMS>gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>Player</OUTPUT_TYPE>
+      </lib_utils_gameUtils_getNextPlayer_FUNC>
+      <lib_utils_gameUtils_cloneGameState_FUNC NAME="cloneGameState" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>deep_clone:8|immutability:7</keywords>
+        <terms>JSON.stringify|state_copy</terms>
+        <annotation>Создаёт глубокую копию состояния игры для безопасных изменений без мутаций.</annotation>
+        <INPUT_PARAMS>gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+      </lib_utils_gameUtils_cloneGameState_FUNC>
+      <lib_utils_gameUtils_checkVictory_FUNC NAME="checkVictory" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>victory_condition:9|score_threshold:8</keywords>
+        <terms>victoryPoints|GAME_CONSTANTS</terms>
+        <annotation>Проверяет достижение победы игроком по количеству победных очков.</annotation>
+        <INPUT_PARAMS>player (Player), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>boolean</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Сравнивает очки с пороговым значением победы"/>
+        </CrossLinks>
+      </lib_utils_gameUtils_checkVictory_FUNC>
+      <lib_utils_gameUtils_getAvailableSettlementPositions_FUNC NAME="getAvailableSettlementPositions" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>placement_rules:9|distance_rule:8|road_dependency:7</keywords>
+        <terms>neighborVertexCheck|roadAdjacency|building_null</terms>
+        <annotation>Возвращает вершины, подходящие для строительства поселения, учитывая правило расстояния и наличие дорог.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>string[]</OUTPUT_TYPE>
+      </lib_utils_gameUtils_getAvailableSettlementPositions_FUNC>
+      <lib_utils_gameUtils_getAvailableRoadPositions_FUNC NAME="getAvailableRoadPositions" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>road_extension:8|graph_traversal:7</keywords>
+        <terms>edgeAvailability|adjacentRoads|vertexBuildings</terms>
+        <annotation>Определяет доступные ребра для строительства дороги с учётом смежных построек игрока.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>string[]</OUTPUT_TYPE>
+      </lib_utils_gameUtils_getAvailableRoadPositions_FUNC>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Использует типы GameState, Player и перечисления фаз"/>
+        <Link TARGET="lib_constants_game_constants_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Опирается на глобальные правила, стоимость и колоду карт"/>
+      </CrossLinks>
+    </lib_utils_gameUtils_ts_py>
+
+    <lib_game_dash_logic_mapGenerator_ts_py FILE="lib/game-logic/mapGenerator.ts" TYPE="MAP_GENERATION_MODULE">
+      <keywords>map_generation:9|hex_grid:9|graph_construction:8</keywords>
+      <terms>generateMap|assignTerrains|assignNumbers|generateVertices|generateEdges</terms>
+      <annotation>Формирует гексагоны, вершины и ребра игрового поля Catan с учётом распределения местностей и номеров.</annotation>
+      <lib_game_dash_logic_mapGenerator_generateMap_FUNC NAME="generateMap" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>map_pipeline:9|logging:6</keywords>
+        <terms>hex_creation|terrain_assignment|vertex_generation|edge_generation</terms>
+        <annotation>Оркестрирует полный конвейер генерации карты и возвращает гексагоны, вершины и ребра.</annotation>
+        <INPUT_PARAMS>None</INPUT_PARAMS>
+        <OUTPUT_TYPE>{ hexes: Hex[]; vertices: Vertex[]; edges: Edge[] }</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_generateHexGrid_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Создаёт базовые гексагоны offset-сетки"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_assignTerrains_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Назначает типы местности по распределению"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_assignNumbers_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Присваивает номера токенов гексагонам"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_generateVertices_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Строит вершины и связывает их с гексами"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_generateEdges_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Формирует ребра между вершинами"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_calculateNeighbors_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="7" DESCRIPTION="Высчитывает соседства для графа"/>
+        </CrossLinks>
+      </lib_game_dash_logic_mapGenerator_generateMap_FUNC>
+      <lib_game_dash_logic_mapGenerator_generateHexGrid_FUNC NAME="generateHexGrid" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>offset_grid:9|hex_layout:8</keywords>
+        <terms>HEX_GRID_ROWS|hexId_sequence</terms>
+        <annotation>Создаёт базовую сетку гексагонов с временными значениями, используя схему 3-4-5-4-3.</annotation>
+        <INPUT_PARAMS>None</INPUT_PARAMS>
+        <OUTPUT_TYPE>Hex[]</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_HEX_GRID_ROWS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Определяет количество гексов в каждом ряду"/>
+        </CrossLinks>
+      </lib_game_dash_logic_mapGenerator_generateHexGrid_FUNC>
+      <lib_game_dash_logic_mapGenerator_assignTerrains_FUNC NAME="assignTerrains" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>terrain_assignment:9|shuffle:7</keywords>
+        <terms>terrainDeck|random_distribution|in_place_mutation</terms>
+        <annotation>Перемешивает типы местности и распределяет их по гексагонам.</annotation>
+        <INPUT_PARAMS>hexes (Hex[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>void</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_TERRAIN_DISTRIBUTION_CONST" TYPE="USES_DATA_FROM" RELEVANCE="9" DESCRIPTION="Генерирует колоду местностей по количествам"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_shuffleArray_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Перемешивает колоду местностей"/>
+        </CrossLinks>
+      </lib_game_dash_logic_mapGenerator_assignTerrains_FUNC>
+      <lib_game_dash_logic_mapGenerator_assignNumbers_FUNC NAME="assignNumbers" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>token_assignment:8|robber_initialization:7</keywords>
+        <terms>NUMBER_TOKENS|desert_handling|shuffle</terms>
+        <annotation>Назначает номера токенов всем гексам, кроме пустыни, и устанавливает разбойника.</annotation>
+        <INPUT_PARAMS>hexes (Hex[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>void</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_NUMBER_TOKENS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Использует стандартный набор токенов"/>
+          <Link TARGET="lib_game_dash_logic_mapGenerator_shuffleArray_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="7" DESCRIPTION="Перемешивает номера токенов перед назначением"/>
+        </CrossLinks>
+      </lib_game_dash_logic_mapGenerator_assignNumbers_FUNC>
+      <lib_game_dash_logic_mapGenerator_generateVertices_FUNC NAME="generateVertices" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>vertex_construction:9|deduplication:7</keywords>
+        <terms>vertexMap|hex.vertexIds|building_slots</terms>
+        <annotation>Создаёт вершины для каждого гексагона, объединяя общие вершины соседних гексов.</annotation>
+        <INPUT_PARAMS>hexes (Hex[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>Vertex[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_mapGenerator_generateVertices_FUNC>
+      <lib_game_dash_logic_mapGenerator_generateEdges_FUNC NAME="generateEdges" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>edge_construction:9|shared_edges:7</keywords>
+        <terms>edgeMap|vertexPairs|road_slot</terms>
+        <annotation>Формирует ребра между вершинами, обеспечивая уникальность и связь с гексами.</annotation>
+        <INPUT_PARAMS>hexes (Hex[]), vertices (Vertex[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>Edge[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_mapGenerator_generateEdges_FUNC>
+      <lib_game_dash_logic_mapGenerator_calculateNeighbors_FUNC NAME="calculateNeighbors" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>adjacency_calculation:8|graph_links:7</keywords>
+        <terms>neighborEdgeIds|neighborVertexIds</terms>
+        <annotation>Заполняет списки соседних вершин и ребер для каждой вершины карты.</annotation>
+        <INPUT_PARAMS>vertices (Vertex[]), edges (Edge[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>void</OUTPUT_TYPE>
+      </lib_game_dash_logic_mapGenerator_calculateNeighbors_FUNC>
+      <lib_game_dash_logic_mapGenerator_shuffleArray_FUNC NAME="shuffleArray" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>Fisher_Yates:8|utility:7</keywords>
+        <terms>random_permutation|copy_on_write</terms>
+        <annotation>Реализует алгоритм Фишера-Йетса для случайного перемешивания массивов.</annotation>
+        <INPUT_PARAMS>array (T[])</INPUT_PARAMS>
+        <OUTPUT_TYPE>T[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_mapGenerator_shuffleArray_FUNC>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Использует типы Hex, Vertex и Edge"/>
+        <Link TARGET="lib_constants_game_constants_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Опирается на распределения местности, токены и схему сетки"/>
+      </CrossLinks>
+    </lib_game_dash_logic_mapGenerator_ts_py>
+
+    <lib_game_dash_logic_validators_ts_py FILE="lib/game-logic/validators.ts" TYPE="RULES_VALIDATION_MODULE">
+      <keywords>rule_validation:9|resource_checks:8|placement_rules:8</keywords>
+      <terms>canBuildRoad|canBuildSettlement|canBuildCity|canBuyDevCard|canPlayDevCard|canTradeWithBank|hasResources</terms>
+      <annotation>Содержит функции проверки допустимости действий игроков, контролируя ресурсы, размещение и специальные карты.</annotation>
+      <lib_game_dash_logic_validators_canBuildRoad_FUNC NAME="canBuildRoad" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>road_validation:9|adjacency_rule:8|resource_cost:7</keywords>
+        <terms>edgeAvailability|roadStock|neighborEdges</terms>
+        <annotation>Проверяет возможность постройки дороги с учётом наличия ресурсов, свободного ребра и смежности.</annotation>
+        <INPUT_PARAMS>player (Player), edgeId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="9" DESCRIPTION="Проверяет наличие ресурсов согласно стоимости дороги"/>
+          <Link TARGET="lib_game_dash_logic_validators_hasResources_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Использует универсальную проверку ресурсов"/>
+        </CrossLinks>
+      </lib_game_dash_logic_validators_canBuildRoad_FUNC>
+      <lib_game_dash_logic_validators_canBuildSettlement_FUNC NAME="canBuildSettlement" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>settlement_validation:9|distance_rule:8|road_dependency:7</keywords>
+        <terms>vertexAvailability|neighborBuildings|adjacentRoad</terms>
+        <annotation>Определяет, можно ли построить поселение на выбранной вершине.</annotation>
+        <INPUT_PARAMS>player (Player), vertexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Сравнивает ресурсы с ценой поселения"/>
+          <Link TARGET="lib_game_dash_logic_validators_hasResources_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Повторно использует проверку ресурсов игроков"/>
+        </CrossLinks>
+      </lib_game_dash_logic_validators_canBuildSettlement_FUNC>
+      <lib_game_dash_logic_validators_canBuildCity_FUNC NAME="canBuildCity" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>city_upgrade:8|resource_check:7</keywords>
+        <terms>settlementPresence|cityStock|BUILDING_COSTS.CITY</terms>
+        <annotation>Проверяет возможность улучшения поселения до города.</annotation>
+        <INPUT_PARAMS>player (Player), vertexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Проверяет стоимость апгрейда до города"/>
+          <Link TARGET="lib_game_dash_logic_validators_hasResources_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="7" DESCRIPTION="Проверяет наличие требуемых ресурсов у игрока"/>
+        </CrossLinks>
+      </lib_game_dash_logic_validators_canBuildCity_FUNC>
+      <lib_game_dash_logic_validators_canBuyDevCard_FUNC NAME="canBuyDevCard" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>devcard_purchase:8|deck_availability:7</keywords>
+        <terms>resourceCost|deckLength</terms>
+        <annotation>Убеждается, что у игрока достаточно ресурсов и в колоде остались карты развития.</annotation>
+        <INPUT_PARAMS>player (Player), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Применяет стоимость карты развития"/>
+          <Link TARGET="lib_game_dash_logic_validators_hasResources_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="7" DESCRIPTION="Проверяет наличие требуемых ресурсов у игрока"/>
+        </CrossLinks>
+      </lib_game_dash_logic_validators_canBuyDevCard_FUNC>
+      <lib_game_dash_logic_validators_canPlayDevCard_FUNC NAME="canPlayDevCard" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>devcard_play:7|hand_validation:6</keywords>
+        <terms>cardOwnership|turnRestrictions</terms>
+        <annotation>Проверяет, есть ли у игрока выбранная карта и соблюдены правила её розыгрыша.</annotation>
+        <INPUT_PARAMS>player (Player), cardType (DevCardType), turnNumber (number)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+      </lib_game_dash_logic_validators_canPlayDevCard_FUNC>
+      <lib_game_dash_logic_validators_canTradeWithBank_FUNC NAME="canTradeWithBank" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>bank_trade:8|ratio_validation:7</keywords>
+        <terms>offerResources|receiveResources|ratioCheck</terms>
+        <annotation>Верифицирует корректность предложения обмена с банком и наличие ресурсов у игрока.</annotation>
+        <INPUT_PARAMS>player (Player), offer (ResourceBundle), receive (ResourceBundle), ratio (number)</INPUT_PARAMS>
+        <OUTPUT_TYPE>ValidationResult</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_validators_hasResources_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="7" DESCRIPTION="Проверяет наличие предлагаемых ресурсов"/>
+        </CrossLinks>
+      </lib_game_dash_logic_validators_canTradeWithBank_FUNC>
+      <lib_game_dash_logic_validators_hasResources_FUNC NAME="hasResources" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>resource_check:9|utility:7</keywords>
+        <terms>Object.entries|every|ResourceType</terms>
+        <annotation>Универсальная проверка, обеспечивающая наличие требуемых ресурсов у игрока.</annotation>
+        <INPUT_PARAMS>player (Player), cost (ResourceBundle)</INPUT_PARAMS>
+        <OUTPUT_TYPE>boolean</OUTPUT_TYPE>
+      </lib_game_dash_logic_validators_hasResources_FUNC>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Использует типы GameState, Player и ResourceBundle"/>
+        <Link TARGET="lib_constants_game_constants_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Опирается на константы стоимости построек и правил торговли"/>
+      </CrossLinks>
+    </lib_game_dash_logic_validators_ts_py>
+
+    <lib_game_dash_logic_calculators_ts_py FILE="lib/game-logic/calculators.ts" TYPE="GAME_METRICS_MODULE">
+      <keywords>scoring:9|longest_road:8|resource_distribution:8|graph_traversal:7</keywords>
+      <terms>calculateVictoryPoints|calculateLongestRoad|distributeResources|checkLargestArmy</terms>
+      <annotation>Рассчитывает игровые метрики и производит распределение ресурсов на основе состояния.</annotation>
+      <lib_game_dash_logic_calculators_calculateVictoryPoints_FUNC NAME="calculateVictoryPoints" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>victory_points:9|building_score:8|achievement_bonus:7</keywords>
+        <terms>settlementPoints|cityPoints|LargestArmy|LongestRoad</terms>
+        <annotation>Суммирует очки игрока, учитывая постройки, достижения и карты развития.</annotation>
+        <INPUT_PARAMS>player (Player), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>number</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="9" DESCRIPTION="Использует таблицу очков для построек и достижений"/>
+        </CrossLinks>
+      </lib_game_dash_logic_calculators_calculateVictoryPoints_FUNC>
+      <lib_game_dash_logic_calculators_calculateLongestRoad_FUNC NAME="calculateLongestRoad" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>dfs:9|road_length:8|graph_search:7</keywords>
+        <terms>playerEdges|visitedSet|backtracking</terms>
+        <annotation>Определяет длину самой длинной цепочки дорог игрока с помощью DFS.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>number</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_calculators_dfsRoadLength_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Итерирует все возможные пути дорог"/>
+        </CrossLinks>
+      </lib_game_dash_logic_calculators_calculateLongestRoad_FUNC>
+      <lib_game_dash_logic_calculators_dfsRoadLength_FUNC NAME="dfsRoadLength" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>recursive_dfs:9|path_length:8|backtracking:7</keywords>
+        <terms>visitedSet|neighborEdges|playerRoads</terms>
+        <annotation>Рекурсивно вычисляет длину дороги от заданного ребра с учётом блокировок строениями других игроков.</annotation>
+        <INPUT_PARAMS>edgeId (string), visited (Set&lt;string&gt;), gameState (GameState), playerId (string)</INPUT_PARAMS>
+        <OUTPUT_TYPE>number</OUTPUT_TYPE>
+      </lib_game_dash_logic_calculators_dfsRoadLength_FUNC>
+      <lib_game_dash_logic_calculators_distributeResources_FUNC NAME="distributeResources" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>resource_distribution:9|dice_roll:8|terrain_mapping:7</keywords>
+        <terms>matchingHexes|BuildingType|TERRAIN_TO_RESOURCE</terms>
+        <annotation>Генерирует распределение ресурсов по игрокам после броска кубиков, не мутируя состояние.</annotation>
+        <INPUT_PARAMS>diceRoll (number), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>Record&lt;string, ResourceBundle&gt;</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_TERRAIN_TO_RESOURCE_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Переводит тип местности в добываемый ресурс"/>
+        </CrossLinks>
+      </lib_game_dash_logic_calculators_distributeResources_FUNC>
+      <lib_game_dash_logic_calculators_getAdjacentVertices_FUNC NAME="getAdjacentVertices" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>hex_neighbors:7|graph_lookup:6</keywords>
+        <terms>hex.vertexIds</terms>
+        <annotation>Возвращает вершины, примыкающие к выбранному гексагону.</annotation>
+        <INPUT_PARAMS>hexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>string[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_calculators_getAdjacentVertices_FUNC>
+      <lib_game_dash_logic_calculators_getAdjacentHexes_FUNC NAME="getAdjacentHexes" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>vertex_neighbors:7|graph_lookup:6</keywords>
+        <terms>vertex.hexIds</terms>
+        <annotation>Возвращает гексагоны, примыкающие к вершине.</annotation>
+        <INPUT_PARAMS>vertexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>string[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_calculators_getAdjacentHexes_FUNC>
+      <lib_game_dash_logic_calculators_checkLongestRoad_FUNC NAME="checkLongestRoad" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>longest_road_award:8|comparison:7</keywords>
+        <terms>playerRoadLength|LONGEST_ROAD_MIN|otherPlayers</terms>
+        <annotation>Определяет, обладает ли игрок самой длинной дорогой с учётом минимального порога.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>boolean</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_calculators_calculateLongestRoad_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Использует расчёт длины дороги для всех игроков"/>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="7" DESCRIPTION="Применяет минимальный порог для награды"/>
+        </CrossLinks>
+      </lib_game_dash_logic_calculators_checkLongestRoad_FUNC>
+      <lib_game_dash_logic_calculators_checkLargestArmy_FUNC NAME="checkLargestArmy" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>largest_army_award:8|knights_comparison:7</keywords>
+        <terms>knightsPlayed|LARGEST_ARMY_MIN|maxComparison</terms>
+        <annotation>Сопоставляет количество сыгранных рыцарей с другими игроками для определения владельца награды.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>boolean</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_constants_game_constants_GAME_CONSTANTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="7" DESCRIPTION="Использует минимальный порог рыцарей для награды"/>
+        </CrossLinks>
+      </lib_game_dash_logic_calculators_checkLargestArmy_FUNC>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Работает с типами GameState, Player и BuildingType"/>
+        <Link TARGET="lib_constants_game_constants_ts_py" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Использует правила подсчёта очков и маппинг ресурсов"/>
+      </CrossLinks>
+    </lib_game_dash_logic_calculators_ts_py>
+
+    <lib_game_dash_logic_actionHandlers_ts_py FILE="lib/game-logic/actionHandlers.ts" TYPE="GAME_ACTIONS_MODULE">
+      <keywords>state_mutations:9|action_processing:8|badge_updates:7</keywords>
+      <terms>handleBuildRoad|handleBuildSettlement|handleBuildCity|handleBuyDevCard|handlePlayKnight|updateLongestRoad|updateLargestArmy|stealRandomResource</terms>
+      <annotation>Обрабатывает действия игроков, изменяя состояние игры и обновляя награды на основе валидаций и калькуляторов.</annotation>
+      <lib_game_dash_logic_actionHandlers_handleBuildRoad_FUNC NAME="handleBuildRoad" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>road_action:9|validation_integration:8|state_clone:7</keywords>
+        <terms>canBuildRoad|BUILDING_COSTS.ROAD|updateLongestRoad</terms>
+        <annotation>Строит дорогу для игрока, вычитает ресурсы и актуализирует награду «Самая длинная дорога».</annotation>
+        <INPUT_PARAMS>playerId (string), edgeId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_validators_canBuildRoad_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Перед строительством убеждается в допустимости действия"/>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Применяет стоимость дороги при списании ресурсов"/>
+          <Link TARGET="lib_game_dash_logic_actionHandlers_updateLongestRoad_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Обновляет владельца награды за длинную дорогу"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_handleBuildRoad_FUNC>
+      <lib_game_dash_logic_actionHandlers_handleBuildSettlement_FUNC NAME="handleBuildSettlement" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>settlement_action:9|resource_deduction:8</keywords>
+        <terms>canBuildSettlement|BUILDING_COSTS.SETTLEMENT</terms>
+        <annotation>Строит поселение, списывая ресурсы и уменьшая запас фигур игрока.</annotation>
+        <INPUT_PARAMS>playerId (string), vertexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_validators_canBuildSettlement_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Проверяет, что место и ресурсы доступны"/>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Определяет стоимость постройки поселения"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_handleBuildSettlement_FUNC>
+      <lib_game_dash_logic_actionHandlers_handleBuildCity_FUNC NAME="handleBuildCity" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>city_upgrade:8|resource_exchange:7</keywords>
+        <terms>canBuildCity|BUILDING_COSTS.CITY|settlement_return</terms>
+        <annotation>Обновляет поселение до города, корректируя запас фигур и ресурсы игрока.</annotation>
+        <INPUT_PARAMS>playerId (string), vertexId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_validators_canBuildCity_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Проверяет наличие поселения и ресурсов для апгрейда"/>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Применяет стоимость города"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_handleBuildCity_FUNC>
+      <lib_game_dash_logic_actionHandlers_handleBuyDevCard_FUNC NAME="handleBuyDevCard" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>devcard_purchase:8|deck_draw:7</keywords>
+        <terms>canBuyDevCard|devCardDeck.pop</terms>
+        <annotation>Покупает карту развития, списывает ресурсы и обновляет колоду.</annotation>
+        <INPUT_PARAMS>playerId (string), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_validators_canBuyDevCard_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Убедиться в наличии ресурсов и карт перед покупкой"/>
+          <Link TARGET="lib_constants_game_constants_BUILDING_COSTS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="8" DESCRIPTION="Определяет стоимость карты развития"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_handleBuyDevCard_FUNC>
+      <lib_game_dash_logic_actionHandlers_handlePlayKnight_FUNC NAME="handlePlayKnight" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>knight_action:8|robber_movement:8|resource_steal:7</keywords>
+        <terms>DevCardType.KNIGHT|updateLargestArmy|stealRandomResource</terms>
+        <annotation>Разыгрывает карту рыцаря: переносит разбойника, крадёт ресурс и обновляет награду «Самая большая армия».</annotation>
+        <INPUT_PARAMS>playerId (string), targetHexId (string), stealFromPlayerId (string | null), gameState (GameState)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_actionHandlers_stealRandomResource_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Крадёт случайный ресурс у выбранного игрока"/>
+          <Link TARGET="lib_game_dash_logic_actionHandlers_updateLargestArmy_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="8" DESCRIPTION="Проверяет владение наградой за армию после розыгрыша рыцаря"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_handlePlayKnight_FUNC>
+      <lib_game_dash_logic_actionHandlers_updateLongestRoad_FUNC NAME="updateLongestRoad" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>badge_update:8|longest_road:8</keywords>
+        <terms>checkLongestRoad|longestRoadPlayerId</terms>
+        <annotation>Обновляет флаг и владельца награды за самую длинную дорогу после строительства.</annotation>
+        <INPUT_PARAMS>gameState (GameState), playerId (string)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_calculators_checkLongestRoad_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Определяет, кому принадлежит награда после действия"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_updateLongestRoad_FUNC>
+      <lib_game_dash_logic_actionHandlers_updateLargestArmy_FUNC NAME="updateLargestArmy" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>badge_update:8|largest_army:8</keywords>
+        <terms>checkLargestArmy|largestArmyPlayerId</terms>
+        <annotation>Обновляет награду «Самая большая армия» после розыгрыша рыцаря.</annotation>
+        <INPUT_PARAMS>gameState (GameState), playerId (string)</INPUT_PARAMS>
+        <OUTPUT_TYPE>GameState</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="lib_game_dash_logic_calculators_checkLargestArmy_FUNC" TYPE="CALLS_FUNCTION" RELEVANCE="9" DESCRIPTION="Сравнивает количество рыцарей между игроками"/>
+        </CrossLinks>
+      </lib_game_dash_logic_actionHandlers_updateLargestArmy_FUNC>
+      <lib_game_dash_logic_actionHandlers_stealRandomResource_FUNC NAME="stealRandomResource" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>resource_transfer:8|random_selection:7</keywords>
+        <terms>availableResources|Math.random|inventory_adjust</terms>
+        <annotation>Перераспределяет случайный ресурс от жертвы к игроку-вору.</annotation>
+        <INPUT_PARAMS>players (Player[]), stealerId (string), victimId (string)</INPUT_PARAMS>
+        <OUTPUT_TYPE>Player[]</OUTPUT_TYPE>
+      </lib_game_dash_logic_actionHandlers_stealRandomResource_FUNC>
+      <CrossLinks>
+        <Link TARGET="types_game_types_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Манипулирует типами GameState, Player и ResourceBundle"/>
+        <Link TARGET="lib_game_dash_logic_validators_ts_py" TYPE="DEPENDS_ON" RELEVANCE="9" DESCRIPTION="Полагается на валидации перед изменением состояния"/>
+        <Link TARGET="lib_game_dash_logic_calculators_ts_py" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Обновляет награды и метрики через калькуляторы"/>
+        <Link TARGET="lib_constants_game_constants_ts_py" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Использует константы стоимости и правил"/>
+      </CrossLinks>
+    </lib_game_dash_logic_actionHandlers_ts_py>
+
+    <components_board_Board_tsx_py FILE="components/board/Board.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>board_rendering:9|SVG_layout:8|client_component:7</keywords>
+      <terms>Board_component|useMemo_positions|HEX_GRID_ROWS|playerColorMap</terms>
+      <annotation>Главный компонент игрового поля: рассчитывает позиции гексов, вершин и ребер и отрисовывает их в SVG.</annotation>
+      <USES_FRAMEWORK>React:9|Next.js:7|TailwindCSS:6</USES_FRAMEWORK>
+      <components_board_Board_Board_FUNC NAME="Board" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>render_pipeline:9|interaction_handlers:7|memoization:7</keywords>
+        <terms>hexPositions|vertexPositions|playerColorMap|highlighting</terms>
+        <annotation>Компонует карту, назначает цвета игрокам и прокидывает обработчики кликов в подкомпоненты.</annotation>
+        <INPUT_PARAMS>gameState (GameState), onHexClick ((hexId: string) =&gt; void) | undefined, onVertexClick ((vertexId: string) =&gt; void) | undefined, onEdgeClick ((edgeId: string) =&gt; void) | undefined, highlightedVertices (string[]) | undefined, highlightedEdges (string[]) | undefined, highlightedHexes (string[]) | undefined</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="components_board_Hex_Hex_FUNC" TYPE="RENDERS_COMPONENT" RELEVANCE="9" DESCRIPTION="Отрисовывает каждый гекс посредством Hex-компонента"/>
+          <Link TARGET="components_board_Edge_Edge_FUNC" TYPE="RENDERS_COMPONENT" RELEVANCE="8" DESCRIPTION="Визуализирует ребра и дороги игроков"/>
+          <Link TARGET="components_board_Vertex_Vertex_FUNC" TYPE="RENDERS_COMPONENT" RELEVANCE="8" DESCRIPTION="Отображает вершины и постройки"/>
+          <Link TARGET="lib_constants_game_constants_HEX_GRID_ROWS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="7" DESCRIPTION="Использует схему рядов для расчёта позиций"/>
+          <Link TARGET="lib_constants_game_constants_PLAYER_COLORS_CONST" TYPE="USES_DATA_FROM" RELEVANCE="7" DESCRIPTION="Назначает цвета игрокам по предустановленному списку"/>
+          <Link TARGET="types_game_types_GameState_INTERFACE" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Получает данные о состоянии карты и игроков"/>
+        </CrossLinks>
+      </components_board_Board_Board_FUNC>
+    </components_board_Board_tsx_py>
+
+    <components_board_Hex_tsx_py FILE="components/board/Hex.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>hex_component:8|terrain_visualization:8|client_component:7</keywords>
+      <terms>Hex_component|terrainColors|robber_indicator</terms>
+      <annotation>SVG-компонент одного гексагона: отображает местность, номер токена и разбойника.</annotation>
+      <USES_FRAMEWORK>React:9</USES_FRAMEWORK>
+      <components_board_Hex_Hex_FUNC NAME="Hex" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>terrain_color:8|click_handler:7|conditional_render:7</keywords>
+        <terms>TerrainType_palette|hex.number|hex.hasRobber</terms>
+        <annotation>Рисует многоугольник гексагона, отображает номер и иконку разбойника по условию.</annotation>
+        <INPUT_PARAMS>hex (Hex), onClick ((hexId: string) =&gt; void) | undefined, highlight (boolean | undefined)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="types_game_types_Hex_INTERFACE" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Использует структуру гекса для отображения"/>
+          <Link TARGET="types_game_types_TerrainType_ENUM" TYPE="DEPENDS_ON" RELEVANCE="7" DESCRIPTION="Опирается на тип местности для выбора цвета"/>
+        </CrossLinks>
+      </components_board_Hex_Hex_FUNC>
+    </components_board_Hex_tsx_py>
+
+    <components_board_Edge_tsx_py FILE="components/board/Edge.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>edge_component:7|road_visualization:7</keywords>
+      <terms>Edge_component|strokeWidth|roadColor</terms>
+      <annotation>SVG-компонент ребра, отображающий дороги игроков и подсветку.</annotation>
+      <USES_FRAMEWORK>React:9</USES_FRAMEWORK>
+      <components_board_Edge_Edge_FUNC NAME="Edge" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>line_render:7|clickable_edge:6</keywords>
+        <terms>edge.road|playerColor|highlight</terms>
+        <annotation>Отрисовывает линию ребра и изменяет стиль при наличии дороги или подсветки.</annotation>
+        <INPUT_PARAMS>edge (Edge), x1 (number), y1 (number), x2 (number), y2 (number), onClick ((edgeId: string) =&gt; void) | undefined, highlight (boolean | undefined)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="types_game_types_Edge_INTERFACE" TYPE="DEPENDS_ON" RELEVANCE="7" DESCRIPTION="Опирается на данные ребра и дорогу"/>
+        </CrossLinks>
+      </components_board_Edge_Edge_FUNC>
+    </components_board_Edge_tsx_py>
+
+    <components_board_Vertex_tsx_py FILE="components/board/Vertex.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>vertex_component:8|building_visualization:8</keywords>
+      <terms>Vertex_component|settlement_shape|city_shape</terms>
+      <annotation>SVG-компонент вершины, отображающий поселения и города игроков или пустые места.</annotation>
+      <USES_FRAMEWORK>React:9</USES_FRAMEWORK>
+      <components_board_Vertex_Vertex_FUNC NAME="Vertex" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>building_render:8|click_handler:7</keywords>
+        <terms>BuildingType.SETTLEMENT|BuildingType.CITY|playerColor</terms>
+        <annotation>Визуализирует постройки или пустую вершину, учитывая подсветку и клики.</annotation>
+        <INPUT_PARAMS>vertex (Vertex), onClick ((vertexId: string) =&gt; void) | undefined, highlight (boolean | undefined)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="types_game_types_Vertex_INTERFACE" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Читает структуру вершины и соседей"/>
+          <Link TARGET="types_game_types_BuildingType_ENUM" TYPE="DEPENDS_ON" RELEVANCE="7" DESCRIPTION="Выбирает форму рендера по типу постройки"/>
+        </CrossLinks>
+      </components_board_Vertex_Vertex_FUNC>
+    </components_board_Vertex_tsx_py>
+
+    <components_ui_Button_tsx_py FILE="components/ui/Button.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>ui_button:7|variant_styles:6</keywords>
+      <terms>Button_component|variantClasses|disabled_state</terms>
+      <annotation>Переиспользуемая кнопка с вариантами стилей, основывающимися на Tailwind-классах.</annotation>
+      <USES_FRAMEWORK>React:9|TailwindCSS:7</USES_FRAMEWORK>
+      <components_ui_Button_Button_FUNC NAME="Button" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>styled_button:7|class_composition:6</keywords>
+        <terms>btn|btn-primary|btn-secondary|btn-danger</terms>
+        <annotation>Рендерит кнопку с выбранным вариантом, прокидывая обработчик клика и children.</annotation>
+        <INPUT_PARAMS>onClick (() =&gt; void), children (React.ReactNode), disabled (boolean | undefined), variant ('primary' | 'secondary' | 'danger' | undefined), className (string | undefined)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+      </components_ui_Button_Button_FUNC>
+    </components_ui_Button_tsx_py>
+
+    <components_ui_PlayerPanel_tsx_py FILE="components/ui/PlayerPanel.tsx" TYPE="REACT_COMPONENT_MODULE">
+      <keywords>player_panel:9|resource_display:8|badge_status:7</keywords>
+      <terms>PlayerPanel_component|resourceIcons|victoryPoints|knightsPlayed</terms>
+      <annotation>Отображает информацию об игроке: ресурсы, очки победы, оставшиеся постройки и достижения.</annotation>
+      <USES_FRAMEWORK>React:9|TailwindCSS:7</USES_FRAMEWORK>
+      <components_ui_PlayerPanel_PlayerPanel_FUNC NAME="PlayerPanel" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>player_summary:9|emoji_resources:7|status_highlight:7</keywords>
+        <terms>totalResources|currentPlayerHighlight|devCardsCount</terms>
+        <annotation>Формирует карточку игрока с визуальными индикаторами статуса и ресурсов.</annotation>
+        <INPUT_PARAMS>player (Player), isCurrentPlayer (boolean)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+        <CrossLinks>
+          <Link TARGET="types_game_types_Player_INTERFACE" TYPE="DEPENDS_ON" RELEVANCE="8" DESCRIPTION="Использует структуру игрока для вывода данных"/>
+          <Link TARGET="types_game_types_ResourceType_ENUM" TYPE="DEPENDS_ON" RELEVANCE="7" DESCRIPTION="Опирается на перечисление ресурсов для отображения иконок"/>
+        </CrossLinks>
+      </components_ui_PlayerPanel_PlayerPanel_FUNC>
+    </components_ui_PlayerPanel_tsx_py>
+
+    <app_layout_tsx_py FILE="app/layout.tsx" TYPE="NEXTJS_LAYOUT_MODULE">
+      <keywords>root_layout:8|metadata:7|global_styles:7</keywords>
+      <terms>RootLayout|metadata|globals.css</terms>
+      <annotation>Корневой layout Next.js: задаёт HTML-каркас, подключает глобальные стили и метаданные страницы.</annotation>
+      <USES_FRAMEWORK>Next.js:9|React:9</USES_FRAMEWORK>
+      <app_layout_RootLayout_FUNC NAME="RootLayout" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>html_shell:8|children_render:7</keywords>
+        <terms>&lt;html lang="en"&gt;|body.antialiased|children_slot</terms>
+        <annotation>Возвращает базовую HTML-структуру приложения с подключением потомков.</annotation>
+        <INPUT_PARAMS>children (React.ReactNode)</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+      </app_layout_RootLayout_FUNC>
+    </app_layout_tsx_py>
+
+    <app_page_tsx_py FILE="app/page.tsx" TYPE="NEXTJS_PAGE_MODULE">
+      <keywords>home_page:8|navigation:7|hero_section:7</keywords>
+      <terms>HomePage|Link|new_game_button|history_button</terms>
+      <annotation>Домашняя страница с главным меню: кнопки начала новой игры и перехода к истории.</annotation>
+      <USES_FRAMEWORK>Next.js:9|React:9|TailwindCSS:7</USES_FRAMEWORK>
+      <app_page_HomePage_FUNC NAME="HomePage" TYPE="IS_FUNCTION_OF_MODULE">
+        <keywords>landing_page:8|call_to_action:7</keywords>
+        <terms>main_layout|Link_navigation|button_classes</terms>
+        <annotation>Компонует карточку меню с кнопками «New Game» и «Game History» и поясняющим текстом.</annotation>
+        <INPUT_PARAMS>None</INPUT_PARAMS>
+        <OUTPUT_TYPE>React.ReactElement</OUTPUT_TYPE>
+      </app_page_HomePage_FUNC>
+    </app_page_tsx_py>
+
+    <!-- ============================================================================ -->
+    <!-- PLANNED MODULES (Phase 4-8) - To be implemented                           -->
+    <!-- ============================================================================ -->
+
+    <FutureDevelopment STATUS="PLANNED">
+      <store_gameStore_ts_py FILE="store/gameStore.ts" TYPE="STATE_MANAGEMENT_MODULE" STATUS="PLANNED_PHASE_4">
+        <keywords>zustand:9|state_management:9|actions:8|immutability:7</keywords>
+        <terms>useGameStore|initializeGame|rollDice|buildRoad|buildSettlement|endTurn</terms>
+        <annotation>Централизованное хранилище состояния игры на Zustand с actions для модификации GameState.</annotation>
+      </store_gameStore_ts_py>
+
+      <app_game_page_tsx_py FILE="app/game/page.tsx" TYPE="NEXTJS_PAGE_MODULE" STATUS="PLANNED_PHASE_4">
+        <keywords>game_screen:9|gameplay_ui:8|state_integration:8</keywords>
+        <terms>GamePage|initial_placement|dice_roll_ui|action_buttons</terms>
+        <annotation>Главный экран игры: интегрирует Board, PlayerPanel, ActionPanel и игровую логику через Zustand.</annotation>
+      </app_game_page_tsx_py>
+
+      <components_game_DicePanel_tsx_py FILE="components/game/DicePanel.tsx" TYPE="REACT_COMPONENT_MODULE" STATUS="PLANNED_PHASE_4">
+        <keywords>dice_ui:8|roll_action:7</keywords>
+        <terms>DicePanel|rollDice_button|dice_animation</terms>
+        <annotation>Компонент для отображения кубиков и кнопки броска.</annotation>
+      </components_game_DicePanel_tsx_py>
+
+      <components_game_ActionPanel_tsx_py FILE="components/game/ActionPanel.tsx" TYPE="REACT_COMPONENT_MODULE" STATUS="PLANNED_PHASE_4">
+        <keywords>action_ui:8|build_buttons:7</keywords>
+        <terms>ActionPanel|build_road_button|build_settlement_button|end_turn_button</terms>
+        <annotation>Панель действий игрока: кнопки строительства, покупки карт и завершения хода.</annotation>
+      </components_game_ActionPanel_tsx_py>
+
+      <components_modals_RobberModal_tsx_py FILE="components/modals/RobberModal.tsx" TYPE="REACT_COMPONENT_MODULE" STATUS="PLANNED_PHASE_5">
+        <keywords>robber_ui:8|resource_discard:7|steal:7</keywords>
+        <terms>RobberModal|hex_selection|player_steal</terms>
+        <annotation>Модальное окно активации разбойника: сброс ресурсов и перемещение разбойника.</annotation>
+      </components_modals_RobberModal_tsx_py>
+
+      <components_modals_BankTradeModal_tsx_py FILE="components/modals/BankTradeModal.tsx" TYPE="REACT_COMPONENT_MODULE" STATUS="PLANNED_PHASE_5">
+        <keywords>trade_ui:8|bank_exchange:7</keywords>
+        <terms>BankTradeModal|resource_selector|trade_ratio</terms>
+        <annotation>Модальное окно обмена с банком: выбор ресурсов и соотношения обмена.</annotation>
+      </components_modals_BankTradeModal_tsx_py>
+
+      <components_game_DevCardPanel_tsx_py FILE="components/game/DevCardPanel.tsx" TYPE="REACT_COMPONENT_MODULE" STATUS="PLANNED_PHASE_5">
+        <keywords>devcard_ui:8|card_play:7</keywords>
+        <terms>DevCardPanel|knight|road_building|year_of_plenty|monopoly</terms>
+        <annotation>Панель карт развития игрока с кнопками розыгрыша.</annotation>
+      </components_game_DevCardPanel_tsx_py>
+
+      <lib_ai_aiPlayer_ts_py FILE="lib/ai/aiPlayer.ts" TYPE="AI_LOGIC_MODULE" STATUS="PLANNED_PHASE_6">
+        <keywords>ai_engine:9|turn_execution:8|decision_tree:8</keywords>
+        <terms>executeAITurn|aiInitialPlacement|aiActionPhase|aiPlayDevCards</terms>
+        <annotation>Главный модуль AI: оркестрирует ход AI игрока от броска кубиков до завершения.</annotation>
+      </lib_ai_aiPlayer_ts_py>
+
+      <lib_ai_aiEvaluator_ts_py FILE="lib/ai/aiEvaluator.ts" TYPE="AI_LOGIC_MODULE" STATUS="PLANNED_PHASE_6">
+        <keywords>ai_heuristics:9|position_scoring:8|action_prioritization:7</keywords>
+        <terms>evaluateActions|evaluateBuildRoad|evaluateBuildSettlement|probabilityCalculation</terms>
+        <annotation>Оценка позиций и действий AI с помощью эвристик и вероятностей.</annotation>
+      </lib_ai_aiEvaluator_ts_py>
+
+      <lib_achievements_achievementTracker_ts_py FILE="lib/achievements/achievementTracker.ts" TYPE="ACHIEVEMENT_MODULE" STATUS="PLANNED_PHASE_7">
+        <keywords>achievements:8|statistics:7|game_history:7</keywords>
+        <terms>checkAchievements|unlockAchievement|saveGameHistory|PlayerStats</terms>
+        <annotation>Система отслеживания достижений и статистики игрока.</annotation>
+      </lib_achievements_achievementTracker_ts_py>
+
+      <lib_utils_storage_ts_py FILE="lib/utils/storage.ts" TYPE="PERSISTENCE_MODULE" STATUS="PLANNED_PHASE_7">
+        <keywords>localStorage:8|persistence:7|game_history:7</keywords>
+        <terms>saveGameHistory|getGameHistory|savePlayerStats|getPlayerStats</terms>
+        <annotation>Слой персистентности для сохранения истории игр и статистики в localStorage.</annotation>
+      </lib_utils_storage_ts_py>
+
+      <app_history_page_tsx_py FILE="app/history/page.tsx" TYPE="NEXTJS_PAGE_MODULE" STATUS="PLANNED_PHASE_7">
+        <keywords>history_screen:8|game_list:7</keywords>
+        <terms>HistoryPage|game_history_table|statistics_display</terms>
+        <annotation>Экран истории игр: отображение списка сыгранных партий и статистики.</annotation>
+      </app_history_page_tsx_py>
+
+      <app_achievements_page_tsx_py FILE="app/achievements/page.tsx" TYPE="NEXTJS_PAGE_MODULE" STATUS="PLANNED_PHASE_7">
+        <keywords>achievements_screen:8|badge_grid:7</keywords>
+        <terms>AchievementsPage|achievement_cards|progress_bars</terms>
+        <annotation>Экран достижений: сетка разблокированных и заблокированных достижений.</annotation>
+      </app_achievements_page_tsx_py>
+    </FutureDevelopment>
+
+    <ProjectCrossLinks TYPE="MODULE_INTERACTIONS_OVERVIEW">
+      <Link FROM_MODULE_TAG="lib_game_dash_logic_actionHandlers_ts_py" TO_MODULE_TAG="lib_game_dash_logic_validators_ts_py" TYPE="REQUESTS_ACTION_VALIDATION" RELEVANCE="9" DESCRIPTION="Обработчики действий вызывают валидаторы для проверки правил перед изменением состояния"/>
+      <Link FROM_MODULE_TAG="lib_game_dash_logic_actionHandlers_ts_py" TO_MODULE_TAG="lib_game_dash_logic_calculators_ts_py" TYPE="UPDATES_SCORING_WITH" RELEVANCE="8" DESCRIPTION="После действий пересчитываются награды и прогресс игроков через калькуляторы"/>
+      <Link FROM_MODULE_TAG="lib_utils_gameUtils_ts_py" TO_MODULE_TAG="lib_constants_game_constants_ts_py" TYPE="USES_RULESET" RELEVANCE="9" DESCRIPTION="Инициализация игроков и состояния зависит от глобальных констант правил"/>
+      <Link FROM_MODULE_TAG="components_board_Board_tsx_py" TO_MODULE_TAG="types_game_types_ts_py" TYPE="VISUALIZES_STATE_FROM" RELEVANCE="8" DESCRIPTION="Отрисовка доски использует структуру GameState и вложенные типы сущностей карты"/>
+      <Link FROM_MODULE_TAG="components_ui_PlayerPanel_tsx_py" TO_MODULE_TAG="lib_game_dash_logic_actionHandlers_ts_py" TYPE="DISPLAYS_OUTPUT_OF" RELEVANCE="6" DESCRIPTION="Панель игроков отражает изменения ресурсов и достижений, произведённые обработчиками действий"/>
+    </ProjectCrossLinks>
+
+  </CatanProject_V1_Info>
+</KnowledgeGraph>

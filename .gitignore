@@ -35,10 +35,7 @@ bower_components
 .lock-wscript
 
 # Documentation and AI instructions (private)
-docs/
 CLAUDE.md
-AI_ONBOARDING.md
-knowledge_graph.xml
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
