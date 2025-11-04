@@ -524,5 +524,195 @@ function stealRandomResource(
 }
 
 /**
+ * FUNCTION_CONTRACT:
+ * PURPOSE: Обработать игру карты Year of Plenty (взять 2 ресурса из банка)
+ * INPUTS:
+ *   - playerId: string - ID игрока
+ *   - resources: ResourceType[] - массив из 2 ресурсов
+ *   - gameState: GameState - текущее состояние
+ * OUTPUTS: GameState - новое состояние
+ * SIDE_EFFECTS: None
+ * KEYWORDS: year of plenty, development card, resources
+ */
+export function handlePlayYearOfPlenty(
+  playerId: string,
+  resources: ResourceType[],
+  gameState: GameState
+): GameState {
+  console.log('[ActionHandlers][handlePlayYearOfPlenty][START]', {
+    playerId,
+    resources,
+  });
+
+  const player = gameState.players.find((p) => p.id === playerId);
+  if (!player) return gameState;
+
+  // Удалить карту Year of Plenty из руки
+  const updatedPlayer = {
+    ...player,
+    devCards: [...player.devCards],
+    playedDevCards: [...player.playedDevCards, DevCardType.YEAR_OF_PLENTY],
+    resources: { ...player.resources },
+  };
+
+  const cardIndex = updatedPlayer.devCards.indexOf(DevCardType.YEAR_OF_PLENTY);
+  if (cardIndex !== -1) {
+    updatedPlayer.devCards.splice(cardIndex, 1);
+  }
+
+  // Добавить выбранные ресурсы
+  resources.forEach((resource) => {
+    updatedPlayer.resources[resource] += 1;
+  });
+
+  const updatedPlayers = gameState.players.map((p) =>
+    p.id === playerId ? updatedPlayer : p
+  );
+
+  console.log('[ActionHandlers][handlePlayYearOfPlenty][SUCCESS]', { playerId });
+
+  return {
+    ...gameState,
+    players: updatedPlayers,
+  };
+}
+
+/**
+ * FUNCTION_CONTRACT:
+ * PURPOSE: Обработать игру карты Monopoly (забрать все ресурсы одного типа)
+ * INPUTS:
+ *   - playerId: string - ID игрока
+ *   - resourceType: ResourceType - тип ресурса для монополии
+ *   - gameState: GameState - текущее состояние
+ * OUTPUTS: GameState - новое состояние
+ * SIDE_EFFECTS: None
+ * KEYWORDS: monopoly, development card, resources
+ */
+export function handlePlayMonopoly(
+  playerId: string,
+  resourceType: ResourceType,
+  gameState: GameState
+): GameState {
+  console.log('[ActionHandlers][handlePlayMonopoly][START]', {
+    playerId,
+    resourceType,
+  });
+
+  const player = gameState.players.find((p) => p.id === playerId);
+  if (!player) return gameState;
+
+  // Удалить карту Monopoly из руки
+  let updatedPlayer = {
+    ...player,
+    devCards: [...player.devCards],
+    playedDevCards: [...player.playedDevCards, DevCardType.MONOPOLY],
+    resources: { ...player.resources },
+  };
+
+  const cardIndex = updatedPlayer.devCards.indexOf(DevCardType.MONOPOLY);
+  if (cardIndex !== -1) {
+    updatedPlayer.devCards.splice(cardIndex, 1);
+  }
+
+  // Забрать все ресурсы выбранного типа у всех игроков
+  let totalCollected = 0;
+  const updatedPlayers = gameState.players.map((p) => {
+    if (p.id === playerId) {
+      return updatedPlayer;
+    } else {
+      const amountToTake = p.resources[resourceType];
+      totalCollected += amountToTake;
+      return {
+        ...p,
+        resources: {
+          ...p.resources,
+          [resourceType]: 0,
+        },
+      };
+    }
+  });
+
+  // Добавить собранные ресурсы текущему игроку
+  const finalPlayers = updatedPlayers.map((p) => {
+    if (p.id === playerId) {
+      return {
+        ...p,
+        resources: {
+          ...p.resources,
+          [resourceType]: p.resources[resourceType] + totalCollected,
+        },
+      };
+    }
+    return p;
+  });
+
+  console.log('[ActionHandlers][handlePlayMonopoly][SUCCESS]', {
+    playerId,
+    totalCollected,
+  });
+
+  return {
+    ...gameState,
+    players: finalPlayers,
+  };
+}
+
+/**
+ * FUNCTION_CONTRACT:
+ * PURPOSE: Обработать игру карты Road Building (построить 2 бесплатные дороги)
+ * INPUTS:
+ *   - playerId: string - ID игрока
+ *   - edgeIds: string[] - массив из 1-2 ID ребер для дорог
+ *   - gameState: GameState - текущее состояние
+ * OUTPUTS: GameState - новое состояние
+ * SIDE_EFFECTS: None
+ * KEYWORDS: road building, development card, roads
+ */
+export function handlePlayRoadBuilding(
+  playerId: string,
+  edgeIds: string[],
+  gameState: GameState
+): GameState {
+  console.log('[ActionHandlers][handlePlayRoadBuilding][START]', {
+    playerId,
+    edgeIds,
+  });
+
+  const player = gameState.players.find((p) => p.id === playerId);
+  if (!player) return gameState;
+
+  // Удалить карту Road Building из руки
+  const updatedPlayer = {
+    ...player,
+    devCards: [...player.devCards],
+    playedDevCards: [...player.playedDevCards, DevCardType.ROAD_BUILDING],
+  };
+
+  const cardIndex = updatedPlayer.devCards.indexOf(DevCardType.ROAD_BUILDING);
+  if (cardIndex !== -1) {
+    updatedPlayer.devCards.splice(cardIndex, 1);
+  }
+
+  let currentState: GameState = {
+    ...gameState,
+    players: gameState.players.map((p) => (p.id === playerId ? updatedPlayer : p)),
+  };
+
+  // Построить дороги (до 2, или сколько есть в запасе)
+  const maxRoads = Math.min(edgeIds.length, 2, player.roads);
+  for (let i = 0; i < maxRoads; i++) {
+    // Построить дорогу бесплатно (используем isInitialPlacement=true для бесплатной постройки)
+    currentState = handleBuildRoad(playerId, edgeIds[i], currentState, true);
+  }
+
+  console.log('[ActionHandlers][handlePlayRoadBuilding][SUCCESS]', {
+    playerId,
+    roadsBuilt: maxRoads,
+  });
+
+  return currentState;
+}
+
+/**
  * END_MODULE_actionHandlers
  */

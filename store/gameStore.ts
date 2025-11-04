@@ -33,6 +33,9 @@ import {
   handleBuildCity,
   handleBuyDevCard,
   handlePlayKnight,
+  handlePlayYearOfPlenty,
+  handlePlayMonopoly,
+  handlePlayRoadBuilding,
 } from '@/lib/game-logic/actionHandlers';
 import {
   handleMoveRobber,
@@ -77,6 +80,9 @@ interface GameStore {
   // Actions - Development Cards
   buyDevCard: () => void;
   playKnightCard: (hexId: string, stealFromPlayerId: string | null) => void;
+  playYearOfPlentyCard: (resources: ResourceType[]) => void;
+  playMonopolyCard: (resourceType: ResourceType) => void;
+  playRoadBuildingCard: (edgeIds: string[]) => void;
 
   // Actions - UI state
   setSelectedHex: (hexId: string | null) => void;
@@ -745,6 +751,84 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (newState !== state) {
       set({ gameState: newState });
       console.log('[GameStore][playKnightCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Year of Plenty (взять 2 ресурса из банка)
+   * INPUTS:
+   *   - resources: ResourceType[] - массив из 2 ресурсов для получения
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, добавляет ресурсы
+   * KEYWORDS: year of plenty, development card, resources
+   */
+  playYearOfPlentyCard: (resources: ResourceType[]) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playYearOfPlentyCard][START]', { resources });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayYearOfPlenty(currentPlayer.id, resources, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playYearOfPlentyCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Monopoly (собрать все ресурсы одного типа)
+   * INPUTS:
+   *   - resourceType: ResourceType - тип ресурса для сбора
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, собирает ресурсы
+   * KEYWORDS: monopoly, development card, resources
+   */
+  playMonopolyCard: (resourceType: ResourceType) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playMonopolyCard][START]', { resourceType });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayMonopoly(currentPlayer.id, resourceType, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playMonopolyCard][SUCCESS]');
+    }
+  },
+
+  /**
+   * FUNCTION_CONTRACT:
+   * PURPOSE: Сыграть карту Road Building (построить 2 бесплатные дороги)
+   * INPUTS:
+   *   - edgeIds: string[] - массив из 1-2 ID ребер для дорог
+   * OUTPUTS: void
+   * SIDE_EFFECTS: Обновляет gameState, удаляет карту, строит дороги
+   * KEYWORDS: road building, development card, roads
+   */
+  playRoadBuildingCard: (edgeIds: string[]) => {
+    const state = get().gameState;
+    if (!state) return;
+
+    console.log('[GameStore][playRoadBuildingCard][START]', { edgeIds });
+
+    const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+    if (!currentPlayer) return;
+
+    const newState = handlePlayRoadBuilding(currentPlayer.id, edgeIds, state);
+
+    if (newState !== state) {
+      set({ gameState: newState });
+      console.log('[GameStore][playRoadBuildingCard][SUCCESS]');
     }
   },
 }));
