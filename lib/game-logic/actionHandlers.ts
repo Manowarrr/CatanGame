@@ -13,7 +13,6 @@ import {
   ResourceType,
   BuildingType,
   DevCardType,
-  ResourceBundle,
   Player,
 } from '@/types/game.types';
 import {
@@ -142,7 +141,7 @@ export function handleBuildSettlement(
   const player = gameState.players.find((p) => p.id === playerId);
   if (!player) return gameState;
 
-  const validation = canBuildSettlement(player, vertexId, gameState);
+  const validation = canBuildSettlement(player, vertexId, gameState, isInitialPlacement);
   if (!validation.valid) {
     console.error('[ActionHandlers][handleBuildSettlement][VALIDATION][FAIL]', {
       error: validation.error,
